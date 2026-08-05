@@ -39,7 +39,8 @@ class HomeScreen extends StatelessWidget {
                   colors: colors,
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: open editor with text block
+                    // Create a note without a section (home note)
+                    // then open editor
                   },
                 ),
                 _NoteTypeOption(
@@ -49,7 +50,8 @@ class HomeScreen extends StatelessWidget {
                   colors: colors,
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: open editor with checklist block
+                    // Create a note without a section (home note)
+                    // then open editor
                   },
                 ),
                 _NoteTypeOption(
@@ -59,7 +61,8 @@ class HomeScreen extends StatelessWidget {
                   colors: colors,
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: open editor with numbered list block
+                    // Create a note without a section (home note)
+                    // then open editor
                   },
                 ),
                 _NoteTypeOption(
@@ -69,7 +72,8 @@ class HomeScreen extends StatelessWidget {
                   colors: colors,
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: open editor with drawing block
+                    // Create a note without a section (home note)
+                    // then open editor
                   },
                 ),
                 _NoteTypeOption(
@@ -97,6 +101,7 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: colors.background,
       appBar: AppBar(title: const Text('Wasurenagusa')),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_home',
         onPressed: () => _showNoteTypePicker(context),
         child: const Icon(Icons.add_rounded),
       ),
