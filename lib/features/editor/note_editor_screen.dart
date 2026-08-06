@@ -9,6 +9,9 @@ import 'blocks/heading_block_widget.dart';
 import 'blocks/checklist_block_widget.dart';
 import 'blocks/list_block_widget.dart';
 import 'blocks/divider_block_widget.dart';
+import '../../widgets/note_options_sheet.dart';
+import '../../core/database/app_database.dart';
+import '../../core/repositories/note_repository.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final int noteId;
@@ -28,26 +31,29 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   late EditorController _controller;
   final _titleController = TextEditingController();
   bool _loading = true;
+  Note? _note;
+  late NoteRepository _noteRepo;
 
   @override
   void initState() {
     super.initState();
+    _noteRepo = ref.read(noteRepositoryProvider);
     _controller = EditorController(
       noteId: widget.noteId,
       blockRepo: ref.read(blockRepositoryProvider),
-      noteRepo: ref.read(noteRepositoryProvider),
+      noteRepo: _noteRepo,
     );
     _loadNote();
   }
 
   Future<void> _loadNote() async {
-    final note = await ref.read(noteRepositoryProvider).getById(widget.noteId);
+    final note = await _noteRepo.getById(widget.noteId);
     if (note != null) {
       _titleController.text = note.title;
+      _note = note;
     }
     await _controller.loadBlocks();
 
-    // If launched with an initial block type, add it if no blocks exist
     if (widget.initialBlockType != null && _controller.blocks.isEmpty) {
       await _controller.addBlock(widget.initialBlockType!);
     }
@@ -64,11 +70,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   Future<void> _saveTitle() async {
-    final note = await ref.read(noteRepositoryProvider).getById(widget.noteId);
+    final note = await _noteRepo.getById(widget.noteId);
     if (note != null) {
-      await ref
-          .read(noteRepositoryProvider)
-          .update(note.copyWith(title: _titleController.text));
+      await _noteRepo.update(note.copyWith(title: _titleController.text));
     }
   }
 
@@ -189,9 +193,29 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.more_vert_rounded, color: colors.onSurface),
-            onPressed: () {
-              // TODO: note options (pin, color tag, delete)
-            },
+            onPressed: _note == null
+                ? null
+                : () async {
+                    await _saveTitle();
+                    final note = await ref
+                        .read(noteRepositoryProvider)
+                        .getById(widget.noteId);
+                    if (!mounted) return;
+                    if (note != null) {
+                      _note = note;
+                      // ignore: use_build_context_synchronously
+                      await showNoteOptions(context, ref, note);
+                    }
+                    if (!mounted) return;
+                    final stillExists = await ref
+                        .read(noteRepositoryProvider)
+                        .getById(widget.noteId);
+                    if (!mounted) return;
+                    if (stillExists == null) {
+                      // ignore: use_build_context_synchronously
+                      Navigator.of(context).pop();
+                    }
+                  },
           ),
         ],
       ),

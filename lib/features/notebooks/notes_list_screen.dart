@@ -4,6 +4,7 @@ import '../../core/database/app_database.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../theme/wasurenagusa_theme.dart';
 import '../editor/note_editor_screen.dart';
+import '../../widgets/note_options_sheet.dart';
 
 final _notesInSectionProvider = StreamProvider.family<List<Note>, int>(
   (ref, sectionId) =>
@@ -92,19 +93,8 @@ class _NoteCard extends StatelessWidget {
     required this.ref,
   });
 
-  Color? _tagColor() {
-    if (note.colorTag == null) return null;
-    const tagColors = {
-      'red': Color(0xFFCF6679),
-      'orange': Color(0xFFD4845A),
-      'yellow': Color(0xFFD4C05A),
-      'green': Color(0xFF5AAD7A),
-      'blue': Color(0xFF5A8AD4),
-      'purple': Color(0xFF9B5AD4),
-      'teal': Color(0xFF5AC4C4),
-    };
-    return tagColors[note.colorTag];
-  }
+  Color? _tagColor() =>
+      note.colorTag != null ? kColorTags[note.colorTag] : null;
 
   @override
   Widget build(BuildContext context) {
@@ -121,74 +111,56 @@ class _NoteCard extends StatelessWidget {
               builder: (_) => NoteEditorScreen(noteId: note.id),
             ),
           ),
-          onLongPress: () {
-            // TODO: note options
-          },
+          onLongPress: () => showNoteOptions(context, ref, note),
           borderRadius: BorderRadius.circular(16),
-          child: Row(
-            children: [
-              // Color tag strip
-              if (tagColor != null)
-                Container(
-                  width: 4,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: tagColor,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      bottomLeft: Radius.circular(16),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: tagColor != null
+                  ? Border(left: BorderSide(color: tagColor, width: 6))
+                  : null,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 20, 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          note.title.isEmpty ? 'Untitled' : note.title,
+                          style: TextStyle(
+                            color: note.title.isEmpty
+                                ? colors.onSurfaceVariant
+                                : colors.onSurface,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            fontStyle: note.title.isEmpty
+                                ? FontStyle.italic
+                                : FontStyle.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatDate(note.updatedAt),
+                          style: TextStyle(
+                            color: colors.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    tagColor != null ? 16 : 20,
-                    14,
-                    20,
-                    14,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              note.title.isEmpty ? 'Untitled' : note.title,
-                              style: TextStyle(
-                                color: note.title.isEmpty
-                                    ? colors.onSurfaceVariant
-                                    : colors.onSurface,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                                fontStyle: note.title.isEmpty
-                                    ? FontStyle.italic
-                                    : FontStyle.normal,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatDate(note.updatedAt),
-                              style: TextStyle(
-                                color: colors.onSurfaceVariant,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (note.isPinned)
-                        Icon(
-                          Icons.push_pin_rounded,
-                          color: colors.accent,
-                          size: 16,
-                        ),
-                    ],
-                  ),
-                ),
+                  if (note.isPinned)
+                    Icon(
+                      Icons.push_pin_rounded,
+                      color: colors.accent,
+                      size: 16,
+                    ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
