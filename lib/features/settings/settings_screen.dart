@@ -4,6 +4,7 @@ import '../../theme/wasurenagusa_theme.dart';
 import '../../widgets/settings_section.dart';
 import '../../widgets/settings_tile.dart';
 import 'theme_mode_screen.dart';
+import 'palette_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,25 +17,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _version = '';
   String _buildNumber = '';
 
-  // Editor font size — stored as a label for display,
-  // actual value handled later when editor is built
-  static const List<String> _fontSizeOptions = ['Small', 'Medium', 'Large'];
-  String _selectedFontSize = 'Medium';
-
   @override
   void initState() {
     super.initState();
     _loadVersion();
-    ThemeRegistry.instance.addListener(_onThemeChanged);
+    ThemeRegistry.instance.addListener(_onRegistryChanged);
   }
 
   @override
   void dispose() {
-    ThemeRegistry.instance.removeListener(_onThemeChanged);
+    ThemeRegistry.instance.removeListener(_onRegistryChanged);
     super.dispose();
   }
 
-  void _onThemeChanged() => setState(() {});
+  void _onRegistryChanged() => setState(() {});
 
   Future<void> _loadVersion() async {
     final info = await PackageInfo.fromPlatform();
@@ -51,102 +47,100 @@ class _SettingsScreenState extends State<SettingsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 8, bottom: 16),
-                  child: Text(
-                    'Editor font size',
-                    style: TextStyle(
-                      color: colors.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 8, bottom: 16),
+                child: Text(
+                  'Editor font size',
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: colors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: _fontSizeOptions.map((size) {
-                      final isFirst = size == _fontSizeOptions.first;
-                      final isLast = size == _fontSizeOptions.last;
-                      final isSelected = size == _selectedFontSize;
-
-                      return Column(
-                        children: [
-                          InkWell(
-                            onTap: () {
-                              setState(() => _selectedFontSize = size);
-                              Navigator.pop(context);
-                              // TODO: persist font size preference
-                            },
-                            borderRadius: BorderRadius.vertical(
-                              top: isFirst
-                                  ? const Radius.circular(16)
-                                  : Radius.zero,
-                              bottom: isLast
-                                  ? const Radius.circular(16)
-                                  : Radius.zero,
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: colors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: WasurenagusaFontSize.values.map((size) {
+                    final isFirst = size == WasurenagusaFontSize.values.first;
+                    final isLast = size == WasurenagusaFontSize.values.last;
+                    final isSelected =
+                        ThemeRegistry.instance.selectedFontSize == size;
+                    return Column(
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            ThemeRegistry.instance.selectFontSize(size);
+                            Navigator.pop(context);
+                          },
+                          borderRadius: BorderRadius.vertical(
+                            top: isFirst
+                                ? const Radius.circular(16)
+                                : Radius.zero,
+                            bottom: isLast
+                                ? const Radius.circular(16)
+                                : Radius.zero,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
-                              ),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    size,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    size.label,
                                     style: TextStyle(
                                       color: colors.onSurface,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  const Spacer(),
-                                  if (isSelected)
-                                    Icon(
-                                      Icons.check_rounded,
-                                      color: colors.accent,
-                                      size: 20,
-                                    ),
-                                ],
-                              ),
+                                ),
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_rounded,
+                                    color: colors.accent,
+                                    size: 20,
+                                  ),
+                              ],
                             ),
                           ),
-                          if (!isLast)
-                            Divider(
-                              height: 1,
-                              thickness: 1,
-                              indent: 20,
-                              color: colors.divider,
-                            ),
-                        ],
-                      );
-                    }).toList(),
-                  ),
+                        ),
+                        if (!isLast)
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            indent: 20,
+                            color: colors.divider,
+                          ),
+                      ],
+                    );
+                  }).toList(),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = WasurenagusaTheme.of(context).colors;
-    final mode = ThemeRegistry.instance.selectedMode;
+    final registry = ThemeRegistry.instance;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -159,15 +153,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               SettingsTile(
                 title: 'Theme mode',
-                subtitle: mode.label,
+                subtitle: registry.selectedMode.label,
                 isFirst: true,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ThemeModeScreen()),
                 ),
               ),
               SettingsTile(
+                title: 'Color palette',
+                subtitle: registry.selectedPalette.label,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PaletteScreen()),
+                ),
+              ),
+              SettingsTile(
                 title: 'Editor font size',
-                subtitle: _selectedFontSize,
+                subtitle: registry.selectedFontSize.label,
                 isLast: true,
                 onTap: () => _showFontSizePicker(colors),
               ),

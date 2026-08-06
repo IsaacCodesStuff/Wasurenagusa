@@ -19,6 +19,7 @@ class ListBlockWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fontSize = ThemeRegistry.instance.selectedFontSize;
     final isBullet = block.type == BlockType.bulletList;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -60,7 +61,7 @@ class ListBlockWidget extends StatelessWidget {
                     'Add item',
                     style: TextStyle(
                       color: colors.onSurfaceVariant,
-                      fontSize: 14,
+                      fontSize: fontSize.textSize,
                     ),
                   ),
                 ],
@@ -113,6 +114,7 @@ class _ListItemState extends State<_ListItem> {
 
   @override
   Widget build(BuildContext context) {
+    final fontSize = ThemeRegistry.instance.selectedFontSize;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -122,7 +124,7 @@ class _ListItemState extends State<_ListItem> {
             widget.isBullet ? '•' : '${widget.index + 1}.',
             style: TextStyle(
               color: widget.colors.accent,
-              fontSize: 15,
+              fontSize: fontSize.textSize,
               fontWeight: FontWeight.w600,
             ),
             textAlign: TextAlign.center,

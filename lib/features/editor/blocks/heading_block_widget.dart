@@ -37,6 +37,7 @@ class _HeadingBlockWidgetState extends State<HeadingBlockWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final fontSize = ThemeRegistry.instance.selectedFontSize;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
@@ -47,7 +48,7 @@ class _HeadingBlockWidgetState extends State<HeadingBlockWidget> {
               controller: _controller,
               style: TextStyle(
                 color: widget.colors.onSurface,
-                fontSize: 22,
+                fontSize: fontSize.headingSize, // was 22
                 fontWeight: FontWeight.w700,
                 height: 1.3,
               ),
@@ -55,7 +56,7 @@ class _HeadingBlockWidgetState extends State<HeadingBlockWidget> {
                 hintText: 'Heading',
                 hintStyle: TextStyle(
                   color: widget.colors.onSurfaceVariant,
-                  fontSize: 22,
+                  fontSize: fontSize.headingSize,
                   fontWeight: FontWeight.w700,
                 ),
                 border: InputBorder.none,

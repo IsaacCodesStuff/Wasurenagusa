@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/wasurenagusa_theme.dart';
 import 'app_shell.dart';
+import 'package:flutter/services.dart';
 import 'core/providers/sort_preference_provider.dart';
 
 void main() async {
@@ -39,7 +40,8 @@ class _WasurenagusaMaterialAppState
   @override
   void initState() {
     super.initState();
-    // Defer until after first frame to avoid modifying provider during build
+    // Draw edge-to-edge, let Flutter handle insets
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(sortPreferenceProvider.notifier).loadAll(widget.prefs);
     });

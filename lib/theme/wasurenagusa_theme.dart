@@ -7,6 +7,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 // ---------------------------------------------------------------------------
 enum WasurenagusaMode { light, dark, amoled }
 
+enum WasurenagusaFontSize {
+  small,
+  medium,
+  large;
+
+  String get label => switch (this) {
+    WasurenagusaFontSize.small => 'Small',
+    WasurenagusaFontSize.medium => 'Medium',
+    WasurenagusaFontSize.large => 'Large',
+  };
+
+  double get textSize => switch (this) {
+    WasurenagusaFontSize.small => 13.0,
+    WasurenagusaFontSize.medium => 15.0,
+    WasurenagusaFontSize.large => 17.0,
+  };
+
+  double get headingSize => switch (this) {
+    WasurenagusaFontSize.small => 18.0,
+    WasurenagusaFontSize.medium => 22.0,
+    WasurenagusaFontSize.large => 26.0,
+  };
+}
+
 extension WasurenagusaModeLabel on WasurenagusaMode {
   String get label {
     switch (this) {
@@ -442,7 +466,12 @@ class WasurenagusaColorScheme {
         iconTheme: IconThemeData(color: onSurface),
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
+          systemNavigationBarColor: Colors.transparent, // add this
+          systemNavigationBarDividerColor: Colors.transparent, // add this
           statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          systemNavigationBarIconBrightness: isDark
+              ? Brightness.light
+              : Brightness.dark, // add this
         ),
       ),
       listTileTheme: ListTileThemeData(
@@ -525,6 +554,15 @@ class ThemeRegistry extends ChangeNotifier {
   WasurenagusaColorScheme get currentScheme =>
       WasurenagusaColorScheme.resolve(mode: _mode, palette: _palette);
 
+  WasurenagusaFontSize _fontSize = WasurenagusaFontSize.medium;
+  WasurenagusaFontSize get selectedFontSize => _fontSize;
+
+  void selectFontSize(WasurenagusaFontSize size) {
+    _fontSize = size;
+    _save();
+    notifyListeners();
+  }
+
   void selectMode(WasurenagusaMode mode) {
     _mode = mode;
     _save();
@@ -562,12 +600,20 @@ class ThemeRegistry extends ChangeNotifier {
         orElse: () => WasurenagusaPalette.default_,
       );
     }
+    final fontSizeStr = prefs.getString('font_size');
+    if (fontSizeStr != null) {
+      _fontSize = WasurenagusaFontSize.values.firstWhere(
+        (f) => f.name == fontSizeStr,
+        orElse: () => WasurenagusaFontSize.medium,
+      );
+    }
   }
 
   void _save() {
     SharedPreferences.getInstance().then((prefs) {
       prefs.setString(_keyMode, _mode.name);
       prefs.setString(_keyPalette, _palette.name);
+      prefs.setString('font_size', _fontSize.name);
     });
   }
 }

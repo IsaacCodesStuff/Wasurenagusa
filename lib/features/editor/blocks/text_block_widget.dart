@@ -37,6 +37,7 @@ class _TextBlockWidgetState extends State<TextBlockWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final fontSize = ThemeRegistry.instance.selectedFontSize;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -47,7 +48,7 @@ class _TextBlockWidgetState extends State<TextBlockWidget> {
               controller: _controller,
               style: TextStyle(
                 color: widget.colors.onSurface,
-                fontSize: 15,
+                fontSize: fontSize.textSize,
                 height: 1.5,
               ),
               decoration: InputDecoration(

@@ -42,6 +42,7 @@ class _ThemeModeScreenState extends State<ThemeModeScreen> {
                         WasurenagusaTheme.of(
                           context,
                         ).onThemeChange(ThemeRegistry.instance.currentScheme);
+                        Navigator.pop(context);
                       },
                       borderRadius: BorderRadius.vertical(
                         top: isFirst ? const Radius.circular(16) : Radius.zero,

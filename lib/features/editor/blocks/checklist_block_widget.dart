@@ -19,6 +19,7 @@ class ChecklistBlockWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fontSize = ThemeRegistry.instance.selectedFontSize;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Column(
@@ -63,7 +64,7 @@ class ChecklistBlockWidget extends StatelessWidget {
                     'Add item',
                     style: TextStyle(
                       color: colors.onSurfaceVariant,
-                      fontSize: 14,
+                      fontSize: fontSize.textSize,
                     ),
                   ),
                 ],
@@ -114,6 +115,7 @@ class _ChecklistItemState extends State<_ChecklistItem> {
 
   @override
   Widget build(BuildContext context) {
+    final fontSize = ThemeRegistry.instance.selectedFontSize;
     return Row(
       children: [
         Checkbox(
@@ -130,7 +132,7 @@ class _ChecklistItemState extends State<_ChecklistItem> {
               color: widget.item.isChecked
                   ? widget.colors.onSurfaceVariant
                   : widget.colors.onSurface,
-              fontSize: 15,
+              fontSize: fontSize.textSize,
               decoration: widget.item.isChecked
                   ? TextDecoration.lineThrough
                   : TextDecoration.none,
