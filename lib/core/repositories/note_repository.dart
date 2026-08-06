@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import '../database/app_database.dart';
 
+enum NoteSortOrder { lastEdited, nameAZ, nameZA, dateCreated, colorTag }
+
 class NoteRepository {
   final AppDatabase _db;
   NoteRepository(this._db);
@@ -14,6 +16,42 @@ class NoteRepository {
               (n) => OrderingTerm.desc(n.updatedAt),
             ]))
           .watch();
+
+  Stream<List<Note>> watchBySectionSorted(int sectionId, NoteSortOrder sort) {
+    final query = _db.select(_db.notes)
+      ..where((n) => n.sectionId.equals(sectionId));
+
+    switch (sort) {
+      case NoteSortOrder.lastEdited:
+        query.orderBy([
+          (n) => OrderingTerm.desc(n.isPinned),
+          (n) => OrderingTerm.desc(n.updatedAt),
+        ]);
+      case NoteSortOrder.nameAZ:
+        query.orderBy([
+          (n) => OrderingTerm.desc(n.isPinned),
+          (n) => OrderingTerm.asc(n.title),
+        ]);
+      case NoteSortOrder.nameZA:
+        query.orderBy([
+          (n) => OrderingTerm.desc(n.isPinned),
+          (n) => OrderingTerm.desc(n.title),
+        ]);
+      case NoteSortOrder.dateCreated:
+        query.orderBy([
+          (n) => OrderingTerm.desc(n.isPinned),
+          (n) => OrderingTerm.desc(n.createdAt),
+        ]);
+      case NoteSortOrder.colorTag:
+        query.orderBy([
+          (n) => OrderingTerm.desc(n.isPinned),
+          (n) => OrderingTerm.asc(n.colorTag),
+          (n) => OrderingTerm.desc(n.updatedAt),
+        ]);
+    }
+
+    return query.watch();
+  }
 
   // Watch pinned notes (for home screen)
   Stream<List<Note>> watchPinned() =>

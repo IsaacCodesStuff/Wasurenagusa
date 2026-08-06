@@ -3,76 +3,56 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/wasurenagusa_theme.dart';
 import 'app_shell.dart';
-import 'package:flutter/services.dart';
+import 'core/providers/sort_preference_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   await ThemeRegistry.instance.loadFromPrefs(prefs);
 
-  runApp(const ProviderScope(child: WasurenagusaApp()));
+  runApp(ProviderScope(child: WasurenagusaApp(prefs: prefs)));
 }
 
-class WasurenagusaApp extends StatefulWidget {
-  const WasurenagusaApp({super.key});
+class WasurenagusaApp extends StatelessWidget {
+  final SharedPreferences prefs;
+  const WasurenagusaApp({super.key, required this.prefs});
 
   @override
-  State<WasurenagusaApp> createState() => _WasurenagusaAppState();
+  Widget build(BuildContext context) {
+    return WasurenagusaThemeProvider(
+      child: _WasurenagusaMaterialApp(prefs: prefs),
+    );
+  }
 }
 
-class _WasurenagusaAppState extends State<WasurenagusaApp> {
-  late WasurenagusaColorScheme _scheme;
+class _WasurenagusaMaterialApp extends ConsumerStatefulWidget {
+  final SharedPreferences prefs;
+  const _WasurenagusaMaterialApp({required this.prefs});
 
+  @override
+  ConsumerState<_WasurenagusaMaterialApp> createState() =>
+      _WasurenagusaMaterialAppState();
+}
+
+class _WasurenagusaMaterialAppState
+    extends ConsumerState<_WasurenagusaMaterialApp> {
   @override
   void initState() {
     super.initState();
-    _scheme = ThemeRegistry.instance.currentScheme;
-    ThemeRegistry.instance.addListener(_onThemeChanged);
-
-    final isDark = _scheme.background.computeLuminance() < 0.5;
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    ThemeRegistry.instance.removeListener(_onThemeChanged);
-    super.dispose();
-  }
-
-  void _onThemeChanged() {
-    final scheme = ThemeRegistry.instance.currentScheme;
-    final isDark = scheme.background.computeLuminance() < 0.5;
-
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-      ),
-    );
-
-    setState(() {
-      _scheme = scheme;
+    // Defer until after first frame to avoid modifying provider during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(sortPreferenceProvider.notifier).loadAll(widget.prefs);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return WasurenagusaTheme(
-      colors: _scheme,
-      onThemeChange: (scheme) {
-        setState(() => _scheme = scheme);
-      },
-      child: MaterialApp(
-        title: 'Wasurenagusa',
-        debugShowCheckedModeBanner: false,
-        theme: _scheme.toThemeData(),
-        home: const AppShell(),
-      ),
+    final colors = WasurenagusaTheme.of(context).colors;
+    return MaterialApp(
+      title: 'Wasurenagusa',
+      debugShowCheckedModeBanner: false,
+      theme: colors.toThemeData(),
+      home: const AppShell(),
     );
   }
 }
