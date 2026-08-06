@@ -28,7 +28,6 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      extendBody: true, // lets content draw behind the nav bar
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
