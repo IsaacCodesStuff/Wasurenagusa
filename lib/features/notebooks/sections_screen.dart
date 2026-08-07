@@ -4,6 +4,7 @@ import '../../core/database/app_database.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../theme/wasurenagusa_theme.dart';
 import 'notes_list_screen.dart';
+import '../seiza/seiza_screen.dart';
 
 final _sectionsProvider = StreamProvider.family<List<Section>, int>(
   (ref, notebookId) =>
@@ -207,6 +208,17 @@ class SectionsScreen extends ConsumerWidget {
             Text(notebook.name),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.hub_outlined, color: colors.onSurface),
+            tooltip: 'Seiza',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => SeizaScreen(notebook: notebook),
+              ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_sections',

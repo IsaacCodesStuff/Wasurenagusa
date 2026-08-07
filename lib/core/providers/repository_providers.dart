@@ -4,6 +4,7 @@ import '../repositories/notebook_repository.dart';
 import '../repositories/section_repository.dart';
 import '../repositories/note_repository.dart';
 import '../repositories/block_repository.dart';
+import '../repositories/seiza_repository.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -38,4 +39,8 @@ final recentNotesProvider = StreamProvider<List<Note>>((ref) {
 
 final blockRepositoryProvider = Provider<BlockRepository>((ref) {
   return BlockRepository(ref.watch(databaseProvider));
+});
+
+final seizaRepositoryProvider = Provider<SeizaRepository>((ref) {
+  return SeizaRepository(ref.watch(databaseProvider));
 });
