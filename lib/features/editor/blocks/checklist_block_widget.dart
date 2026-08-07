@@ -146,6 +146,7 @@ class _ChecklistItemState extends State<_ChecklistItem> {
             ),
             onChanged: widget.onChanged,
             onSubmitted: (_) => widget.onSubmit(),
+            textCapitalization: TextCapitalization.sentences,
           ),
         ),
         if (widget.onDelete != null)

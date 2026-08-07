@@ -64,6 +64,7 @@ class _HeadingBlockWidgetState extends State<HeadingBlockWidget> {
                 contentPadding: const EdgeInsets.symmetric(vertical: 4),
               ),
               maxLines: null,
+              textCapitalization: TextCapitalization.sentences,
               onChanged: widget.onChanged,
             ),
           ),

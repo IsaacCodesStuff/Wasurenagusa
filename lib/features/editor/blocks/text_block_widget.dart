@@ -59,6 +59,7 @@ class _TextBlockWidgetState extends State<TextBlockWidget> {
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
               ),
               maxLines: null,
+              textCapitalization: TextCapitalization.sentences,
               onChanged: widget.onChanged,
             ),
           ),

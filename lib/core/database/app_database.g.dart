@@ -2869,6 +2869,493 @@ class NoteLinksCompanion extends UpdateCompanion<NoteLink> {
   }
 }
 
+class $SeizaNodesTable extends SeizaNodes
+    with TableInfo<$SeizaNodesTable, SeizaNode> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SeizaNodesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _noteIdMeta = const VerificationMeta('noteId');
+  @override
+  late final GeneratedColumn<int> noteId = GeneratedColumn<int>(
+    'note_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES notes (id)',
+    ),
+  );
+  static const VerificationMeta _notebookIdMeta = const VerificationMeta(
+    'notebookId',
+  );
+  @override
+  late final GeneratedColumn<int> notebookId = GeneratedColumn<int>(
+    'notebook_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES notebooks (id)',
+    ),
+  );
+  static const VerificationMeta _xMeta = const VerificationMeta('x');
+  @override
+  late final GeneratedColumn<double> x = GeneratedColumn<double>(
+    'x',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _yMeta = const VerificationMeta('y');
+  @override
+  late final GeneratedColumn<double> y = GeneratedColumn<double>(
+    'y',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _isPinnedMeta = const VerificationMeta(
+    'isPinned',
+  );
+  @override
+  late final GeneratedColumn<bool> isPinned = GeneratedColumn<bool>(
+    'is_pinned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_pinned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    noteId,
+    notebookId,
+    x,
+    y,
+    isPinned,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'seiza_nodes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SeizaNode> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('note_id')) {
+      context.handle(
+        _noteIdMeta,
+        noteId.isAcceptableOrUnknown(data['note_id']!, _noteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_noteIdMeta);
+    }
+    if (data.containsKey('notebook_id')) {
+      context.handle(
+        _notebookIdMeta,
+        notebookId.isAcceptableOrUnknown(data['notebook_id']!, _notebookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_notebookIdMeta);
+    }
+    if (data.containsKey('x')) {
+      context.handle(_xMeta, x.isAcceptableOrUnknown(data['x']!, _xMeta));
+    }
+    if (data.containsKey('y')) {
+      context.handle(_yMeta, y.isAcceptableOrUnknown(data['y']!, _yMeta));
+    }
+    if (data.containsKey('is_pinned')) {
+      context.handle(
+        _isPinnedMeta,
+        isPinned.isAcceptableOrUnknown(data['is_pinned']!, _isPinnedMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SeizaNode map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SeizaNode(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      noteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}note_id'],
+      )!,
+      notebookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}notebook_id'],
+      )!,
+      x: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}x'],
+      )!,
+      y: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}y'],
+      )!,
+      isPinned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_pinned'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SeizaNodesTable createAlias(String alias) {
+    return $SeizaNodesTable(attachedDatabase, alias);
+  }
+}
+
+class SeizaNode extends DataClass implements Insertable<SeizaNode> {
+  final int id;
+  final int noteId;
+  final int notebookId;
+  final double x;
+  final double y;
+  final bool isPinned;
+  final int createdAt;
+  final int updatedAt;
+  const SeizaNode({
+    required this.id,
+    required this.noteId,
+    required this.notebookId,
+    required this.x,
+    required this.y,
+    required this.isPinned,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['note_id'] = Variable<int>(noteId);
+    map['notebook_id'] = Variable<int>(notebookId);
+    map['x'] = Variable<double>(x);
+    map['y'] = Variable<double>(y);
+    map['is_pinned'] = Variable<bool>(isPinned);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  SeizaNodesCompanion toCompanion(bool nullToAbsent) {
+    return SeizaNodesCompanion(
+      id: Value(id),
+      noteId: Value(noteId),
+      notebookId: Value(notebookId),
+      x: Value(x),
+      y: Value(y),
+      isPinned: Value(isPinned),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory SeizaNode.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SeizaNode(
+      id: serializer.fromJson<int>(json['id']),
+      noteId: serializer.fromJson<int>(json['noteId']),
+      notebookId: serializer.fromJson<int>(json['notebookId']),
+      x: serializer.fromJson<double>(json['x']),
+      y: serializer.fromJson<double>(json['y']),
+      isPinned: serializer.fromJson<bool>(json['isPinned']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'noteId': serializer.toJson<int>(noteId),
+      'notebookId': serializer.toJson<int>(notebookId),
+      'x': serializer.toJson<double>(x),
+      'y': serializer.toJson<double>(y),
+      'isPinned': serializer.toJson<bool>(isPinned),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  SeizaNode copyWith({
+    int? id,
+    int? noteId,
+    int? notebookId,
+    double? x,
+    double? y,
+    bool? isPinned,
+    int? createdAt,
+    int? updatedAt,
+  }) => SeizaNode(
+    id: id ?? this.id,
+    noteId: noteId ?? this.noteId,
+    notebookId: notebookId ?? this.notebookId,
+    x: x ?? this.x,
+    y: y ?? this.y,
+    isPinned: isPinned ?? this.isPinned,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  SeizaNode copyWithCompanion(SeizaNodesCompanion data) {
+    return SeizaNode(
+      id: data.id.present ? data.id.value : this.id,
+      noteId: data.noteId.present ? data.noteId.value : this.noteId,
+      notebookId: data.notebookId.present
+          ? data.notebookId.value
+          : this.notebookId,
+      x: data.x.present ? data.x.value : this.x,
+      y: data.y.present ? data.y.value : this.y,
+      isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SeizaNode(')
+          ..write('id: $id, ')
+          ..write('noteId: $noteId, ')
+          ..write('notebookId: $notebookId, ')
+          ..write('x: $x, ')
+          ..write('y: $y, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, noteId, notebookId, x, y, isPinned, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SeizaNode &&
+          other.id == this.id &&
+          other.noteId == this.noteId &&
+          other.notebookId == this.notebookId &&
+          other.x == this.x &&
+          other.y == this.y &&
+          other.isPinned == this.isPinned &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SeizaNodesCompanion extends UpdateCompanion<SeizaNode> {
+  final Value<int> id;
+  final Value<int> noteId;
+  final Value<int> notebookId;
+  final Value<double> x;
+  final Value<double> y;
+  final Value<bool> isPinned;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  const SeizaNodesCompanion({
+    this.id = const Value.absent(),
+    this.noteId = const Value.absent(),
+    this.notebookId = const Value.absent(),
+    this.x = const Value.absent(),
+    this.y = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  SeizaNodesCompanion.insert({
+    this.id = const Value.absent(),
+    required int noteId,
+    required int notebookId,
+    this.x = const Value.absent(),
+    this.y = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
+  }) : noteId = Value(noteId),
+       notebookId = Value(notebookId),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<SeizaNode> custom({
+    Expression<int>? id,
+    Expression<int>? noteId,
+    Expression<int>? notebookId,
+    Expression<double>? x,
+    Expression<double>? y,
+    Expression<bool>? isPinned,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (noteId != null) 'note_id': noteId,
+      if (notebookId != null) 'notebook_id': notebookId,
+      if (x != null) 'x': x,
+      if (y != null) 'y': y,
+      if (isPinned != null) 'is_pinned': isPinned,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  SeizaNodesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? noteId,
+    Value<int>? notebookId,
+    Value<double>? x,
+    Value<double>? y,
+    Value<bool>? isPinned,
+    Value<int>? createdAt,
+    Value<int>? updatedAt,
+  }) {
+    return SeizaNodesCompanion(
+      id: id ?? this.id,
+      noteId: noteId ?? this.noteId,
+      notebookId: notebookId ?? this.notebookId,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      isPinned: isPinned ?? this.isPinned,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (noteId.present) {
+      map['note_id'] = Variable<int>(noteId.value);
+    }
+    if (notebookId.present) {
+      map['notebook_id'] = Variable<int>(notebookId.value);
+    }
+    if (x.present) {
+      map['x'] = Variable<double>(x.value);
+    }
+    if (y.present) {
+      map['y'] = Variable<double>(y.value);
+    }
+    if (isPinned.present) {
+      map['is_pinned'] = Variable<bool>(isPinned.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SeizaNodesCompanion(')
+          ..write('id: $id, ')
+          ..write('noteId: $noteId, ')
+          ..write('notebookId: $notebookId, ')
+          ..write('x: $x, ')
+          ..write('y: $y, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2880,6 +3367,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TagsTable tags = $TagsTable(this);
   late final $NoteTagsTable noteTags = $NoteTagsTable(this);
   late final $NoteLinksTable noteLinks = $NoteLinksTable(this);
+  late final $SeizaNodesTable seizaNodes = $SeizaNodesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2893,6 +3381,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     tags,
     noteTags,
     noteLinks,
+    seizaNodes,
   ];
 }
 
@@ -2933,6 +3422,24 @@ final class $$NotebooksTableReferences
     ).filter((f) => f.notebookId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_sectionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$SeizaNodesTable, List<SeizaNode>>
+  _seizaNodesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.seizaNodes,
+    aliasName: 'notebooks__id__seiza_nodes__notebook_id',
+  );
+
+  $$SeizaNodesTableProcessedTableManager get seizaNodesRefs {
+    final manager = $$SeizaNodesTableTableManager(
+      $_db,
+      $_db.seizaNodes,
+    ).filter((f) => f.notebookId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_seizaNodesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -2994,6 +3501,31 @@ class $$NotebooksTableFilterComposer
           }) => $$SectionsTableFilterComposer(
             $db: $db,
             $table: $db.sections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> seizaNodesRefs(
+    Expression<bool> Function($$SeizaNodesTableFilterComposer f) f,
+  ) {
+    final $$SeizaNodesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.seizaNodes,
+      getReferencedColumn: (t) => t.notebookId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeizaNodesTableFilterComposer(
+            $db: $db,
+            $table: $db.seizaNodes,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -3095,6 +3627,31 @@ class $$NotebooksTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> seizaNodesRefs<T extends Object>(
+    Expression<T> Function($$SeizaNodesTableAnnotationComposer a) f,
+  ) {
+    final $$SeizaNodesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.seizaNodes,
+      getReferencedColumn: (t) => t.notebookId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeizaNodesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.seizaNodes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$NotebooksTableTableManager
@@ -3110,7 +3667,7 @@ class $$NotebooksTableTableManager
           $$NotebooksTableUpdateCompanionBuilder,
           (Notebook, $$NotebooksTableReferences),
           Notebook,
-          PrefetchHooks Function({bool sectionsRefs})
+          PrefetchHooks Function({bool sectionsRefs, bool seizaNodesRefs})
         > {
   $$NotebooksTableTableManager(_$AppDatabase db, $NotebooksTable table)
     : super(
@@ -3163,36 +3720,63 @@ class $$NotebooksTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({sectionsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (sectionsRefs) db.sections],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (sectionsRefs)
-                    await $_getPrefetchedData<
-                      Notebook,
-                      $NotebooksTable,
-                      Section
-                    >(
-                      currentTable: table,
-                      referencedTable: $$NotebooksTableReferences
-                          ._sectionsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$NotebooksTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).sectionsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.notebookId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({sectionsRefs = false, seizaNodesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (sectionsRefs) db.sections,
+                    if (seizaNodesRefs) db.seizaNodes,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (sectionsRefs)
+                        await $_getPrefetchedData<
+                          Notebook,
+                          $NotebooksTable,
+                          Section
+                        >(
+                          currentTable: table,
+                          referencedTable: $$NotebooksTableReferences
+                              ._sectionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$NotebooksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).sectionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.notebookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (seizaNodesRefs)
+                        await $_getPrefetchedData<
+                          Notebook,
+                          $NotebooksTable,
+                          SeizaNode
+                        >(
+                          currentTable: table,
+                          referencedTable: $$NotebooksTableReferences
+                              ._seizaNodesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$NotebooksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).seizaNodesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.notebookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -3209,7 +3793,7 @@ typedef $$NotebooksTableProcessedTableManager =
       $$NotebooksTableUpdateCompanionBuilder,
       (Notebook, $$NotebooksTableReferences),
       Notebook,
-      PrefetchHooks Function({bool sectionsRefs})
+      PrefetchHooks Function({bool sectionsRefs, bool seizaNodesRefs})
     >;
 typedef $$SectionsTableCreateCompanionBuilder =
     SectionsCompanion Function({
@@ -3721,6 +4305,24 @@ final class $$NotesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$SeizaNodesTable, List<SeizaNode>>
+  _seizaNodesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.seizaNodes,
+    aliasName: 'notes__id__seiza_nodes__note_id',
+  );
+
+  $$SeizaNodesTableProcessedTableManager get seizaNodesRefs {
+    final manager = $$SeizaNodesTableTableManager(
+      $_db,
+      $_db.seizaNodes,
+    ).filter((f) => f.noteId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_seizaNodesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$NotesTableFilterComposer extends Composer<_$AppDatabase, $NotesTable> {
@@ -3885,6 +4487,31 @@ class $$NotesTableFilterComposer extends Composer<_$AppDatabase, $NotesTable> {
           }) => $$NoteLinksTableFilterComposer(
             $db: $db,
             $table: $db.noteLinks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> seizaNodesRefs(
+    Expression<bool> Function($$SeizaNodesTableFilterComposer f) f,
+  ) {
+    final $$SeizaNodesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.seizaNodes,
+      getReferencedColumn: (t) => t.noteId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeizaNodesTableFilterComposer(
+            $db: $db,
+            $table: $db.seizaNodes,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4125,6 +4752,31 @@ class $$NotesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> seizaNodesRefs<T extends Object>(
+    Expression<T> Function($$SeizaNodesTableAnnotationComposer a) f,
+  ) {
+    final $$SeizaNodesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.seizaNodes,
+      getReferencedColumn: (t) => t.noteId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeizaNodesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.seizaNodes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$NotesTableTableManager
@@ -4146,6 +4798,7 @@ class $$NotesTableTableManager
             bool noteTagsRefs,
             bool outgoingLinks,
             bool incomingLinks,
+            bool seizaNodesRefs,
           })
         > {
   $$NotesTableTableManager(_$AppDatabase db, $NotesTable table)
@@ -4216,6 +4869,7 @@ class $$NotesTableTableManager
                 noteTagsRefs = false,
                 outgoingLinks = false,
                 incomingLinks = false,
+                seizaNodesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -4224,6 +4878,7 @@ class $$NotesTableTableManager
                     if (noteTagsRefs) db.noteTags,
                     if (outgoingLinks) db.noteLinks,
                     if (incomingLinks) db.noteLinks,
+                    if (seizaNodesRefs) db.seizaNodes,
                   ],
                   addJoins:
                       <
@@ -4327,6 +4982,23 @@ class $$NotesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (seizaNodesRefs)
+                        await $_getPrefetchedData<Note, $NotesTable, SeizaNode>(
+                          currentTable: table,
+                          referencedTable: $$NotesTableReferences
+                              ._seizaNodesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$NotesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).seizaNodesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.noteId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -4353,6 +5025,7 @@ typedef $$NotesTableProcessedTableManager =
         bool noteTagsRefs,
         bool outgoingLinks,
         bool incomingLinks,
+        bool seizaNodesRefs,
       })
     >;
 typedef $$NoteBlocksTableCreateCompanionBuilder =
@@ -6058,6 +6731,460 @@ typedef $$NoteLinksTableProcessedTableManager =
       NoteLink,
       PrefetchHooks Function({bool sourceNoteId, bool targetNoteId})
     >;
+typedef $$SeizaNodesTableCreateCompanionBuilder =
+    SeizaNodesCompanion Function({
+      Value<int> id,
+      required int noteId,
+      required int notebookId,
+      Value<double> x,
+      Value<double> y,
+      Value<bool> isPinned,
+      required int createdAt,
+      required int updatedAt,
+    });
+typedef $$SeizaNodesTableUpdateCompanionBuilder =
+    SeizaNodesCompanion Function({
+      Value<int> id,
+      Value<int> noteId,
+      Value<int> notebookId,
+      Value<double> x,
+      Value<double> y,
+      Value<bool> isPinned,
+      Value<int> createdAt,
+      Value<int> updatedAt,
+    });
+
+final class $$SeizaNodesTableReferences
+    extends BaseReferences<_$AppDatabase, $SeizaNodesTable, SeizaNode> {
+  $$SeizaNodesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $NotesTable _noteIdTable(_$AppDatabase db) =>
+      db.notes.createAlias('seiza_nodes__note_id__notes__id');
+
+  $$NotesTableProcessedTableManager get noteId {
+    final $_column = $_itemColumn<int>('note_id')!;
+
+    final manager = $$NotesTableTableManager(
+      $_db,
+      $_db.notes,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_noteIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $NotebooksTable _notebookIdTable(_$AppDatabase db) =>
+      db.notebooks.createAlias('seiza_nodes__notebook_id__notebooks__id');
+
+  $$NotebooksTableProcessedTableManager get notebookId {
+    final $_column = $_itemColumn<int>('notebook_id')!;
+
+    final manager = $$NotebooksTableTableManager(
+      $_db,
+      $_db.notebooks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_notebookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SeizaNodesTableFilterComposer
+    extends Composer<_$AppDatabase, $SeizaNodesTable> {
+  $$SeizaNodesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get x => $composableBuilder(
+    column: $table.x,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get y => $composableBuilder(
+    column: $table.y,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$NotesTableFilterComposer get noteId {
+    final $$NotesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.noteId,
+      referencedTable: $db.notes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NotesTableFilterComposer(
+            $db: $db,
+            $table: $db.notes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$NotebooksTableFilterComposer get notebookId {
+    final $$NotebooksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.notebookId,
+      referencedTable: $db.notebooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NotebooksTableFilterComposer(
+            $db: $db,
+            $table: $db.notebooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SeizaNodesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SeizaNodesTable> {
+  $$SeizaNodesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get x => $composableBuilder(
+    column: $table.x,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get y => $composableBuilder(
+    column: $table.y,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$NotesTableOrderingComposer get noteId {
+    final $$NotesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.noteId,
+      referencedTable: $db.notes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NotesTableOrderingComposer(
+            $db: $db,
+            $table: $db.notes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$NotebooksTableOrderingComposer get notebookId {
+    final $$NotebooksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.notebookId,
+      referencedTable: $db.notebooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NotebooksTableOrderingComposer(
+            $db: $db,
+            $table: $db.notebooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SeizaNodesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SeizaNodesTable> {
+  $$SeizaNodesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get x =>
+      $composableBuilder(column: $table.x, builder: (column) => column);
+
+  GeneratedColumn<double> get y =>
+      $composableBuilder(column: $table.y, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPinned =>
+      $composableBuilder(column: $table.isPinned, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$NotesTableAnnotationComposer get noteId {
+    final $$NotesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.noteId,
+      referencedTable: $db.notes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NotesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.notes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$NotebooksTableAnnotationComposer get notebookId {
+    final $$NotebooksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.notebookId,
+      referencedTable: $db.notebooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NotebooksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.notebooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SeizaNodesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SeizaNodesTable,
+          SeizaNode,
+          $$SeizaNodesTableFilterComposer,
+          $$SeizaNodesTableOrderingComposer,
+          $$SeizaNodesTableAnnotationComposer,
+          $$SeizaNodesTableCreateCompanionBuilder,
+          $$SeizaNodesTableUpdateCompanionBuilder,
+          (SeizaNode, $$SeizaNodesTableReferences),
+          SeizaNode,
+          PrefetchHooks Function({bool noteId, bool notebookId})
+        > {
+  $$SeizaNodesTableTableManager(_$AppDatabase db, $SeizaNodesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SeizaNodesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SeizaNodesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SeizaNodesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> noteId = const Value.absent(),
+                Value<int> notebookId = const Value.absent(),
+                Value<double> x = const Value.absent(),
+                Value<double> y = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+              }) => SeizaNodesCompanion(
+                id: id,
+                noteId: noteId,
+                notebookId: notebookId,
+                x: x,
+                y: y,
+                isPinned: isPinned,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int noteId,
+                required int notebookId,
+                Value<double> x = const Value.absent(),
+                Value<double> y = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                required int createdAt,
+                required int updatedAt,
+              }) => SeizaNodesCompanion.insert(
+                id: id,
+                noteId: noteId,
+                notebookId: notebookId,
+                x: x,
+                y: y,
+                isPinned: isPinned,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SeizaNodesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({noteId = false, notebookId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (noteId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.noteId,
+                                referencedTable: $$SeizaNodesTableReferences
+                                    ._noteIdTable(db),
+                                referencedColumn: $$SeizaNodesTableReferences
+                                    ._noteIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+                    if (notebookId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.notebookId,
+                                referencedTable: $$SeizaNodesTableReferences
+                                    ._notebookIdTable(db),
+                                referencedColumn: $$SeizaNodesTableReferences
+                                    ._notebookIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SeizaNodesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SeizaNodesTable,
+      SeizaNode,
+      $$SeizaNodesTableFilterComposer,
+      $$SeizaNodesTableOrderingComposer,
+      $$SeizaNodesTableAnnotationComposer,
+      $$SeizaNodesTableCreateCompanionBuilder,
+      $$SeizaNodesTableUpdateCompanionBuilder,
+      (SeizaNode, $$SeizaNodesTableReferences),
+      SeizaNode,
+      PrefetchHooks Function({bool noteId, bool notebookId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6077,4 +7204,6 @@ class $AppDatabaseManager {
       $$NoteTagsTableTableManager(_db, _db.noteTags);
   $$NoteLinksTableTableManager get noteLinks =>
       $$NoteLinksTableTableManager(_db, _db.noteLinks);
+  $$SeizaNodesTableTableManager get seizaNodes =>
+      $$SeizaNodesTableTableManager(_db, _db.seizaNodes);
 }

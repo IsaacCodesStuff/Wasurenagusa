@@ -143,6 +143,7 @@ class _ListItemState extends State<_ListItem> {
             ),
             onChanged: widget.onChanged,
             onSubmitted: (_) => widget.onSubmit(),
+            textCapitalization: TextCapitalization.sentences,
           ),
         ),
         if (widget.onDelete != null)

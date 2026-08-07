@@ -12,6 +12,7 @@ import 'tables/note_blocks.dart';
 import 'tables/block_items.dart';
 import 'tables/tags.dart';
 import 'tables/note_links.dart';
+import 'tables/seiza_nodes.dart';
 
 part 'app_database.g.dart';
 
@@ -25,13 +26,14 @@ part 'app_database.g.dart';
     Tags,
     NoteTags,
     NoteLinks,
+    SeizaNodes,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -39,7 +41,9 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (m, from, to) async {
-      // Future migrations go here
+      if (from < 2) {
+        await m.createTable(seizaNodes);
+      }
     },
   );
 }
