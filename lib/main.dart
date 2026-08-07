@@ -6,6 +6,9 @@ import 'app_shell.dart';
 import 'package:flutter/services.dart';
 import 'core/providers/sort_preference_provider.dart';
 
+// Global route observer — imported by SeizaScreen
+final routeObserver = RouteObserver<ModalRoute<void>>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
@@ -40,7 +43,6 @@ class _WasurenagusaMaterialAppState
   @override
   void initState() {
     super.initState();
-    // Draw edge-to-edge, let Flutter handle insets
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(sortPreferenceProvider.notifier).loadAll(widget.prefs);
@@ -54,6 +56,7 @@ class _WasurenagusaMaterialAppState
       title: 'Wasurenagusa',
       debugShowCheckedModeBanner: false,
       theme: colors.toThemeData(),
+      navigatorObservers: [routeObserver], // add this
       home: const AppShell(),
     );
   }

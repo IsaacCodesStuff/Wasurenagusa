@@ -7,19 +7,20 @@ import '../../theme/wasurenagusa_theme.dart';
 import '../editor/note_editor_screen.dart';
 import 'dart:math' show cos, sin;
 import '../../widgets/note_options_sheet.dart';
+import '../../main.dart' show routeObserver;
 
 // ─────────────────────────────────────────────
 // Providers
 // ─────────────────────────────────────────────
 
-final _seizaNodesProvider = FutureProvider.family<List<SeizaNodeWithNote>, int>(
+final _seizaNodesProvider = StreamProvider.family<List<SeizaNodeWithNote>, int>(
   (ref, notebookId) =>
-      ref.watch(seizaRepositoryProvider).getNodesForNotebook(notebookId),
+      ref.watch(seizaRepositoryProvider).watchNodesForNotebook(notebookId),
 );
 
-final _seizaEdgesProvider = FutureProvider.family<List<NoteLink>, int>(
+final _seizaEdgesProvider = StreamProvider.family<List<NoteLink>, int>(
   (ref, notebookId) =>
-      ref.watch(seizaRepositoryProvider).getEdgesForNotebook(notebookId),
+      ref.watch(seizaRepositoryProvider).watchEdgesForNotebook(notebookId),
 );
 
 // ─────────────────────────────────────────────
@@ -34,8 +35,25 @@ class SeizaScreen extends ConsumerStatefulWidget {
   ConsumerState<SeizaScreen> createState() => _SeizaScreenState();
 }
 
-class _SeizaScreenState extends ConsumerState<SeizaScreen> {
-  // Node positions held in memory during session; persisted on drag end
+class _SeizaScreenState extends ConsumerState<SeizaScreen> with RouteAware {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Returning to Seiza from editor or note creator
+    _init();
+  } // Node positions held in memory during session; persisted on drag end
+
   final Map<int, Offset> _positions = {};
   // Node sizes for hit testing
   final Map<int, Size> _sizes = {};
@@ -56,8 +74,6 @@ class _SeizaScreenState extends ConsumerState<SeizaScreen> {
         .read(seizaRepositoryProvider)
         .autoPlaceUnpositioned(widget.notebook.id);
     if (mounted) {
-      ref.invalidate(_seizaNodesProvider(widget.notebook.id));
-      ref.invalidate(_seizaEdgesProvider(widget.notebook.id));
       setState(() => _loading = false);
     }
   }
@@ -100,12 +116,44 @@ class _SeizaScreenState extends ConsumerState<SeizaScreen> {
             ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_seiza',
+        onPressed: () => _showCreateNoteDialog(context),
+        child: const Icon(Icons.add_rounded),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : nodesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (nodes) {
+                if (nodes.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('🌌', style: const TextStyle(fontSize: 64)),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No notes in this notebook',
+                          style: TextStyle(
+                            color: colors.onSurface,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Add notes to sections to see them here',
+                          style: TextStyle(
+                            color: colors.onSurfaceVariant,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 _initializePositions(nodes);
                 return edgesAsync.when(
                   loading: () =>
@@ -255,7 +303,6 @@ class _SeizaScreenState extends ConsumerState<SeizaScreen> {
     await ref
         .read(seizaRepositoryProvider)
         .createEdge(sourceNoteId: sourceId, targetNoteId: targetId);
-    ref.invalidate(_seizaEdgesProvider(widget.notebook.id));
   }
 
   void _cancelConnectMode() {
@@ -326,7 +373,6 @@ class _SeizaScreenState extends ConsumerState<SeizaScreen> {
                   await ref
                       .read(seizaRepositoryProvider)
                       .togglePinned(n.node.id, !n.node.isPinned);
-                  ref.invalidate(_seizaNodesProvider(widget.notebook.id));
                 },
               ),
               ListTile(
@@ -356,7 +402,6 @@ class _SeizaScreenState extends ConsumerState<SeizaScreen> {
         await ref.read(seizaRepositoryProvider).deleteEdge(edge.id);
       }
     }
-    ref.invalidate(_seizaEdgesProvider(widget.notebook.id));
   }
 
   // ── Position initialization ───────────────
@@ -385,17 +430,134 @@ class _SeizaScreenState extends ConsumerState<SeizaScreen> {
     }
   }
 
-  void _autoPlaceAll(List<SeizaNodeWithNote> nodes) {
-    setState(() {
-      for (int i = 0; i < nodes.length; i++) {
-        final col = i % _columns;
-        final row = i ~/ _columns;
-        _positions[nodes[i].note.id] = Offset(
-          300 + col * _gridSpacingX,
-          300 + row * _gridSpacingY,
-        );
-      }
-    });
+  Future<void> _autoPlaceAll(List<SeizaNodeWithNote> nodes) async {
+    final newPositions = <int, Offset>{};
+    for (int i = 0; i < nodes.length; i++) {
+      final col = i % _columns;
+      final row = i ~/ _columns;
+      newPositions[nodes[i].note.id] = Offset(
+        300 + col * _gridSpacingX,
+        300 + row * _gridSpacingY,
+      );
+    }
+    setState(() => _positions.addAll(newPositions));
+
+    // Persist each position to DB
+    for (final n in nodes) {
+      final pos = newPositions[n.note.id];
+      if (pos == null) continue;
+      await ref
+          .read(seizaRepositoryProvider)
+          .upsertNode(
+            noteId: n.note.id,
+            notebookId: widget.notebook.id,
+            x: pos.dx,
+            y: pos.dy,
+          );
+    }
+  }
+
+  Future<void> _showCreateNoteDialog(BuildContext context) async {
+    final colors = WasurenagusaTheme.of(context).colors;
+
+    // Fetch sections for this notebook
+    final sections = await ref
+        .read(sectionRepositoryProvider)
+        .getSectionsByNotebook(widget.notebook.id);
+
+    if (!context.mounted) return;
+
+    if (sections.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: colors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'No sections yet',
+            style: TextStyle(
+              color: colors.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            'Create a section in this notebook first before adding notes.',
+            style: TextStyle(color: colors.onSurfaceVariant),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('OK', style: TextStyle(color: colors.accent)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Show section picker
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Text(
+                  'Add note to section',
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              ...sections.map(
+                (section) => ListTile(
+                  leading: Icon(
+                    Icons.folder_outlined,
+                    color: colors.accent,
+                    size: 22,
+                  ),
+                  title: Text(
+                    section.name,
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final noteId = await ref
+                        .read(noteRepositoryProvider)
+                        .create(sectionId: section.id);
+                    if (context.mounted) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => NoteEditorScreen(noteId: noteId),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -490,7 +652,7 @@ class _NodeCardState extends State<_NodeCard> {
                           ? FontStyle.italic
                           : FontStyle.normal,
                     ),
-                    maxLines: 2,
+                    maxLines: 1, // tighten to 1 since we now have a subtitle
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -504,6 +666,16 @@ class _NodeCardState extends State<_NodeCard> {
                     ),
                   ),
               ],
+            ),
+            const SizedBox(height: 3),
+            Text(
+              widget.noteWithNode.section.name, // add this
+              style: TextStyle(
+                color: widget.colors.onSurfaceVariant,
+                fontSize: 11,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             if (note.colorTag != null) ...[
               const SizedBox(height: 6),

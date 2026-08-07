@@ -37,4 +37,10 @@ class SectionRepository {
   // Delete section
   Future<int> delete(int id) =>
       (_db.delete(_db.sections)..where((s) => s.id.equals(id))).go();
+
+  Future<List<Section>> getSectionsByNotebook(int notebookId) =>
+      (_db.select(_db.sections)
+            ..where((s) => s.notebookId.equals(notebookId))
+            ..orderBy([(s) => OrderingTerm.asc(s.name)]))
+          .get();
 }

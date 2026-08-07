@@ -19,6 +19,7 @@ class SeizaRepository {
       return SeizaNodeWithNote(
         node: row.readTable(db.seizaNodes),
         note: row.readTable(db.notes),
+        section: row.readTable(db.sections),
       );
     }).toList();
   }
@@ -175,12 +176,57 @@ class SeizaRepository {
           );
     }
   }
+
+  Stream<List<SeizaNodeWithNote>> watchNodesForNotebook(int notebookId) {
+    final query = db.select(db.seizaNodes).join([
+      innerJoin(db.notes, db.notes.id.equalsExp(db.seizaNodes.noteId)),
+      innerJoin(db.sections, db.sections.id.equalsExp(db.notes.sectionId)),
+    ])..where(db.seizaNodes.notebookId.equals(notebookId));
+
+    return query.watch().map(
+      (rows) => rows.map((row) {
+        return SeizaNodeWithNote(
+          node: row.readTable(db.seizaNodes),
+          note: row.readTable(db.notes),
+          section: row.readTable(db.sections),
+        );
+      }).toList(),
+    );
+  }
+
+  Stream<List<NoteLink>> watchEdgesForNotebook(int notebookId) async* {
+    // Watch both note IDs for this notebook AND note_links reactively
+    // by combining two streams
+    yield* db.select(db.noteLinks).watch().asyncMap((allLinks) async {
+      // Get current note IDs for this notebook (fast, small query)
+      final noteIdsQuery = db.select(db.notes).join([
+        innerJoin(db.sections, db.sections.id.equalsExp(db.notes.sectionId)),
+      ])..where(db.sections.notebookId.equals(notebookId));
+
+      final noteIds = await noteIdsQuery
+          .map((row) => row.readTable(db.notes).id)
+          .get();
+
+      return allLinks
+          .where(
+            (l) =>
+                noteIds.contains(l.sourceNoteId) &&
+                noteIds.contains(l.targetNoteId),
+          )
+          .toList();
+    });
+  }
 }
 
 // Joined result model
 class SeizaNodeWithNote {
   final SeizaNode node;
   final Note note;
+  final Section section;
 
-  SeizaNodeWithNote({required this.node, required this.note});
+  SeizaNodeWithNote({
+    required this.node,
+    required this.note,
+    required this.section,
+  });
 }
