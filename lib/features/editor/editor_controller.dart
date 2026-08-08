@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../../core/models/note_block_model.dart';
 import '../../core/repositories/block_repository.dart';
 import '../../core/repositories/note_repository.dart';
@@ -8,6 +8,75 @@ class EditorController extends ChangeNotifier {
   final int noteId;
   final BlockRepository blockRepo;
   final NoteRepository noteRepo;
+  final Map<int, TextEditingController> textControllers = {};
+  int focusedBlockId = -1;
+
+  // Call this when a block gains focus
+  void onBlockFocused(int blockId) {
+    focusedBlockId = blockId;
+    notifyListeners();
+  }
+
+  // Call this when a block loses focus
+  void onBlockUnfocused(int blockId) {
+    if (focusedBlockId == blockId) {
+      focusedBlockId = -1;
+      notifyListeners();
+    }
+  }
+
+  // Get or create a TextEditingController for a block
+  TextEditingController controllerFor(NoteBlockModel block) {
+    return textControllers.putIfAbsent(
+      block.id!,
+      () => TextEditingController(text: block.textContent),
+    );
+  }
+
+  // Insert text at cursor in the focused block
+  void insertAtCursor(String prefix, String suffix) {
+    if (focusedBlockId == -1) return;
+    final tc = textControllers[focusedBlockId];
+    if (tc == null) return;
+
+    final selection = tc.selection;
+    final text = tc.text;
+
+    if (!selection.isValid) {
+      // No cursor position — just append
+      tc.text = '$text$prefix$suffix';
+      tc.selection = TextSelection.collapsed(
+        offset: tc.text.length - suffix.length,
+      );
+      return;
+    }
+
+    final before = text.substring(0, selection.start);
+    final selected = text.substring(selection.start, selection.end);
+    final after = text.substring(selection.end);
+
+    final newText = '$before$prefix$selected$suffix$after';
+    tc.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(
+        offset: before.length + prefix.length + selected.length,
+      ),
+    );
+
+    // Persist to DB
+    final blockIndex = _blocks.indexWhere((b) => b.id == focusedBlockId);
+    if (blockIndex != -1) {
+      updateBlockText(blockIndex, tc.text);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final tc in textControllers.values) {
+      tc.dispose();
+    }
+    super.dispose();
+  }
 
   final List<NoteBlockModel> _blocks = [];
   List<NoteBlockModel> get blocks => List.unmodifiable(_blocks);
@@ -174,7 +243,6 @@ class EditorController extends ChangeNotifier {
 
   // Reorder blocks
   Future<void> reorderBlocks(int oldIndex, int newIndex) async {
-    if (oldIndex < newIndex) newIndex--;
     final block = _blocks.removeAt(oldIndex);
     _blocks.insert(newIndex, block);
     // Update positions in DB

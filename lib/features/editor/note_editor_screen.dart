@@ -13,9 +13,10 @@ import 'blocks/quote_block_widget.dart';
 import 'blocks/code_block_widget.dart';
 import 'blocks/drawing_block_widget.dart';
 import 'blocks/table_block_widget.dart';
-import '../../widgets/note_options_sheet.dart';
-import '../../core/database/app_database.dart';
 import '../../core/repositories/note_repository.dart';
+import '../../widgets/note_options_sheet.dart';
+import 'package:drift/drift.dart' show Value;
+import '../../core/database/app_database.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final int noteId;
@@ -36,12 +37,16 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   final _titleController = TextEditingController();
   bool _loading = true;
   bool _reorderMode = false;
-  Note? _note;
   late NoteRepository _noteRepo;
+  final Map<int, GlobalKey> _blockKeys = {};
+  int? _draggingIndex;
+  int? _targetIndex;
+  double _dragY = 0;
+  Note? _note;
 
-  // Tracks which block is focused for the formatting toolbar
-  int? _focusedBlockIndex;
-  final Map<int, FocusNode> _focusNodes = {};
+  GlobalKey _keyFor(int index) {
+    return _blockKeys.putIfAbsent(index, () => GlobalKey());
+  }
 
   @override
   void initState() {
@@ -75,9 +80,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     _saveTitle();
     _titleController.dispose();
     _controller.dispose();
-    for (final node in _focusNodes.values) {
-      node.dispose();
-    }
     super.dispose();
   }
 
@@ -86,6 +88,117 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (note != null) {
       await _noteRepo.update(note.copyWith(title: _titleController.text));
     }
+  }
+
+  void _showColorTagPicker() {
+    final colors = WasurenagusaTheme.of(context).colors;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tag color',
+                style: TextStyle(
+                  color: colors.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  // No color option
+                  GestureDetector(
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final note = await _noteRepo.getById(widget.noteId);
+                      if (note != null) {
+                        await _noteRepo.update(
+                          note.copyWith(colorTag: const Value(null)),
+                        );
+                        if (mounted) {
+                          setState(
+                            () => _note = note.copyWith(
+                              colorTag: const Value(null),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: colors.onSurfaceVariant,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: colors.onSurfaceVariant,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                  ...kColorTags.entries.map((entry) {
+                    final isSelected = _note?.colorTag == entry.key;
+                    return GestureDetector(
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        final note = await _noteRepo.getById(widget.noteId);
+                        if (note != null) {
+                          await _noteRepo.update(
+                            note.copyWith(colorTag: Value(entry.key)),
+                          );
+                          if (mounted) {
+                            setState(
+                              () => _note = note.copyWith(
+                                colorTag: Value(entry.key),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: entry.value,
+                          shape: BoxShape.circle,
+                          border: isSelected
+                              ? Border.all(color: colors.onSurface, width: 2.5)
+                              : null,
+                        ),
+                        child: isSelected
+                            ? Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              )
+                            : null,
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // ── FAB grid popup ────────────────────────
@@ -251,16 +364,27 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               color: _reorderMode ? colors.accent : colors.onSurface,
             ),
             tooltip: _reorderMode ? 'Done reordering' : 'Reorder blocks',
-            onPressed: () => setState(() => _reorderMode = !_reorderMode),
+            onPressed: () {
+              setState(() {
+                _reorderMode = !_reorderMode;
+                _blockKeys.clear();
+                _draggingIndex = null;
+                _targetIndex = null;
+              });
+            },
           ),
         ],
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: _reorderMode
           ? null
-          : FloatingActionButton(
-              heroTag: 'fab_editor',
-              onPressed: _showBlockPicker,
-              child: const Icon(Icons.add_rounded),
+          : Padding(
+              padding: const EdgeInsets.only(bottom: 48),
+              child: FloatingActionButton(
+                heroTag: 'fab_editor',
+                onPressed: _showBlockPicker,
+                child: const Icon(Icons.add_rounded),
+              ),
             ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -283,21 +407,25 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                     if (!_reorderMode)
                       Positioned(
                         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                        left: 24,
-                        right: 24,
-                        child: _FormattingToolbar(
-                          colors: colors,
-                          enabled:
-                              _focusedBlockIndex != null &&
-                              _controller.blocks.isNotEmpty &&
-                              _controller
-                                  .blocks[_focusedBlockIndex!]
-                                  .type
-                                  .hasTextContent,
-                          onBold: () => _insertFormat('**', '**'),
-                          onItalic: () => _insertFormat('*', '*'),
-                          onCode: () => _insertFormat('`', '`'),
-                          onStrikethrough: () => _insertFormat('~~', '~~'),
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: _FormattingToolbar(
+                            colors: colors,
+                            enabled:
+                                _controller.focusedBlockId != -1 &&
+                                _controller.blocks.any(
+                                  (b) =>
+                                      b.id == _controller.focusedBlockId ||
+                                      -b.id! == _controller.focusedBlockId,
+                                ),
+                            onBold: () => _insertFormat('**', '**'),
+                            onItalic: () => _insertFormat('*', '*'),
+                            onCode: () => _insertFormat('`', '`'),
+                            onStrikethrough: () => _insertFormat('~~', '~~'),
+                            currentColorTag: _note?.colorTag, // add
+                            onColorTag: _showColorTagPicker, // add
+                          ),
                         ),
                       ),
                   ],
@@ -309,13 +437,17 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   // ── Normal list (no drag handles, no card backgrounds) ───
   Widget _buildNormalList(WasurenagusaColorScheme colors) {
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 120),
-      itemCount: _controller.blocks.length,
-      itemBuilder: (context, i) {
-        final block = _controller.blocks[i];
-        return _buildBlock(block, i, colors, reorderMode: false);
-      },
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: ListView.builder(
+        padding: const EdgeInsets.only(top: 8, bottom: 120),
+        itemCount: _controller.blocks.length,
+        itemBuilder: (context, i) {
+          final block = _controller.blocks[i];
+          return _buildBlock(block, i, colors, reorderMode: false);
+        },
+      ),
     );
   }
 
@@ -326,7 +458,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
           child: Text(
-            'Drag a block to reorganize',
+            'Hold a block to drag and reorganize',
             style: TextStyle(
               color: colors.onSurfaceVariant,
               fontSize: 13,
@@ -335,16 +467,23 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           ),
         ),
         Expanded(
-          child: ReorderableListView.builder(
+          child: ListView.builder(
             padding: const EdgeInsets.only(top: 4, bottom: 96),
             itemCount: _controller.blocks.length,
-            onReorderItem: _controller.reorderBlocks,
             itemBuilder: (context, i) {
               final block = _controller.blocks[i];
-              return _ReorderCard(
-                key: ValueKey(block.id ?? i),
+              final isDragging = _draggingIndex == i;
+              final isTarget = _targetIndex == i && _draggingIndex != i;
+
+              return _DragCard(
+                key: _keyFor(i),
                 colors: colors,
-                child: _buildBlock(block, i, colors, reorderMode: true),
+                isDragging: isDragging,
+                isTarget: isTarget,
+                onDragStart: (details) => _onDragStart(i, details),
+                onDragUpdate: (details) => _onDragUpdate(details),
+                onDragEnd: (_) => _onDragEnd(),
+                child: _buildBlockWidget(block, i, colors),
               );
             },
           ),
@@ -353,15 +492,61 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     );
   }
 
+  void _onDragStart(int index, LongPressStartDetails details) {
+    setState(() {
+      _draggingIndex = index;
+      _targetIndex = index;
+      _dragY = details.globalPosition.dy;
+    });
+  }
+
+  void _onDragUpdate(LongPressMoveUpdateDetails details) {
+    _dragY = details.globalPosition.dy;
+    final newTarget = _findTargetIndex(_dragY);
+    if (newTarget != _targetIndex) {
+      setState(() => _targetIndex = newTarget);
+    }
+  }
+
+  void _onDragEnd() {
+    if (_draggingIndex != null &&
+        _targetIndex != null &&
+        _draggingIndex != _targetIndex) {
+      _controller.reorderBlocks(_draggingIndex!, _targetIndex!);
+      // Remap keys after reorder
+      _blockKeys.clear();
+    }
+    setState(() {
+      _draggingIndex = null;
+      _targetIndex = null;
+    });
+  }
+
+  int _findTargetIndex(double globalY) {
+    int best = _draggingIndex ?? 0;
+    double bestDist = double.infinity;
+
+    for (int i = 0; i < _controller.blocks.length; i++) {
+      final key = _blockKeys[i];
+      if (key == null) continue;
+      final ctx = key.currentContext;
+      if (ctx == null) continue;
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box == null) continue;
+      final pos = box.localToGlobal(Offset.zero);
+      final center = pos.dy + box.size.height / 2;
+      final dist = (globalY - center).abs();
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    }
+    return best;
+  }
+
   // ── Format insertion ──────────────────────
   void _insertFormat(String prefix, String suffix) {
-    final index = _focusedBlockIndex;
-    if (index == null) return;
-    final block = _controller.blocks[index];
-    if (!block.type.hasTextContent) return;
-    final current = block.textContent;
-    _controller.updateBlockText(index, '$current$prefix$suffix');
-    setState(() {});
+    _controller.insertAtCursor(prefix, suffix);
   }
 
   Widget _buildBlock(
@@ -371,59 +556,85 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     required bool reorderMode,
   }) {
     final key = ValueKey(block.id ?? index);
+    final blockWidget = _buildBlockWidget(block, index, colors);
+    return KeyedSubtree(key: key, child: blockWidget);
+  }
 
+  Widget _buildBlockWidget(
+    NoteBlockModel block,
+    int index,
+    WasurenagusaColorScheme colors,
+  ) {
     switch (block.type) {
       case BlockType.text:
         return TextBlockWidget(
-          key: key,
           block: block,
           colors: colors,
+          textController: _controller.controllerFor(block),
           onChanged: (text) => _controller.updateBlockText(index, text),
           onDelete: () => _controller.deleteBlock(index),
+          onFocused: () => _controller.onBlockFocused(block.id!),
+          onUnfocused: () => _controller.onBlockUnfocused(block.id!),
         );
       case BlockType.heading:
         return HeadingBlockWidget(
-          key: key,
           block: block,
           colors: colors,
+          textController: _controller.controllerFor(block),
           onChanged: (text) => _controller.updateBlockText(index, text),
           onDelete: () => _controller.deleteBlock(index),
+          onFocused: () => _controller.onBlockFocused(block.id!),
+          onUnfocused: () => _controller.onBlockUnfocused(block.id!),
         );
       case BlockType.checklist:
         return ChecklistBlockWidget(
-          key: key,
           block: block,
           colors: colors,
           controller: _controller,
           blockIndex: index,
+          onItemFocusGained: (tc) {
+            _controller.textControllers[-block.id!] = tc;
+            _controller.onBlockFocused(-block.id!);
+          },
+          onItemFocusLost: () {
+            _controller.textControllers.remove(-block.id!);
+            _controller.onBlockUnfocused(-block.id!);
+          },
         );
       case BlockType.numberedList:
       case BlockType.bulletList:
         return ListBlockWidget(
-          key: key,
           block: block,
           colors: colors,
           controller: _controller,
           blockIndex: index,
+          onItemFocusGained: (tc) {
+            _controller.textControllers[-block.id!] = tc;
+            _controller.onBlockFocused(-block.id!);
+          },
+          onItemFocusLost: () {
+            _controller.textControllers.remove(-block.id!);
+            _controller.onBlockUnfocused(-block.id!);
+          },
         );
       case BlockType.divider:
         return DividerBlockWidget(
-          key: key,
           block: block,
           colors: colors,
           onDelete: () => _controller.deleteBlock(index),
         );
       case BlockType.quote:
         return QuoteBlockWidget(
-          key: key,
           block: block,
           colors: colors,
+          textController: _controller.controllerFor(block),
           onChanged: (text) => _controller.updateBlockText(index, text),
           onDelete: () => _controller.deleteBlock(index),
+          onFocused: () => _controller.onBlockFocused(block.id!),
+          onUnfocused: () => _controller.onBlockUnfocused(block.id!),
         );
       case BlockType.code:
         return CodeBlockWidget(
-          key: key,
           block: block,
           colors: colors,
           onChanged: (text) => _controller.updateBlockText(index, text),
@@ -431,14 +642,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         );
       case BlockType.drawing:
         return DrawingBlockWidget(
-          key: key,
           block: block,
           colors: colors,
           onDelete: () => _controller.deleteBlock(index),
         );
       case BlockType.table:
         return TableBlockWidget(
-          key: key,
           block: block,
           colors: colors,
           onDelete: () => _controller.deleteBlock(index),
@@ -451,22 +660,53 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 // Reorder card wrapper
 // ─────────────────────────────────────────────
 
-class _ReorderCard extends StatelessWidget {
+class _DragCard extends StatelessWidget {
   final WasurenagusaColorScheme colors;
+  final bool isDragging;
+  final bool isTarget;
+  final void Function(LongPressStartDetails) onDragStart;
+  final void Function(LongPressMoveUpdateDetails) onDragUpdate;
+  final void Function(LongPressEndDetails) onDragEnd;
   final Widget child;
 
-  const _ReorderCard({super.key, required this.colors, required this.child});
+  const _DragCard({
+    super.key,
+    required this.colors,
+    required this.isDragging,
+    required this.isTarget,
+    required this.onDragStart,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: colors.surfaceVariant,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.divider),
+    return GestureDetector(
+      onLongPressStart: onDragStart,
+      onLongPressMoveUpdate: onDragUpdate,
+      onLongPressEnd: onDragEnd,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: isDragging
+              ? colors.accent.withValues(alpha: 0.08)
+              : isTarget
+              ? colors.accent.withValues(alpha: 0.18)
+              : colors.surfaceVariant,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDragging
+                ? colors.accent.withValues(alpha: 0.3)
+                : isTarget
+                ? colors.accent
+                : colors.divider,
+            width: isTarget ? 2 : 1,
+          ),
+        ),
+        child: AbsorbPointer(absorbing: true, child: child),
       ),
-      child: child,
     );
   }
 }
@@ -529,6 +769,8 @@ class _FormattingToolbar extends StatelessWidget {
   final VoidCallback onItalic;
   final VoidCallback onCode;
   final VoidCallback onStrikethrough;
+  final String? currentColorTag;
+  final VoidCallback onColorTag;
 
   const _FormattingToolbar({
     required this.colors,
@@ -537,54 +779,83 @@ class _FormattingToolbar extends StatelessWidget {
     required this.onItalic,
     required this.onCode,
     required this.onStrikethrough,
+    required this.currentColorTag,
+    required this.onColorTag,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _ToolbarButton(
-            label: 'B',
-            bold: true,
-            colors: colors,
-            enabled: enabled,
-            onTap: onBold,
-          ),
-          _ToolbarButton(
-            label: 'I',
-            italic: true,
-            colors: colors,
-            enabled: enabled,
-            onTap: onItalic,
-          ),
-          _ToolbarButton(
-            label: 'S̶',
-            colors: colors,
-            enabled: enabled,
-            onTap: onStrikethrough,
-          ),
-          _ToolbarButton(
-            label: '</>',
-            mono: true,
-            colors: colors,
-            enabled: enabled,
-            onTap: onCode,
-          ),
-        ],
+    return IntrinsicWidth(
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ToolbarButton(
+              label: 'B',
+              bold: true,
+              colors: colors,
+              enabled: enabled,
+              onTap: onBold,
+            ),
+            _ToolbarButton(
+              label: 'I',
+              italic: true,
+              colors: colors,
+              enabled: enabled,
+              onTap: onItalic,
+            ),
+            _ToolbarButton(
+              label: 'S̶',
+              colors: colors,
+              enabled: enabled,
+              onTap: onStrikethrough,
+            ),
+            _ToolbarButton(
+              label: '</>',
+              mono: true,
+              colors: colors,
+              enabled: enabled,
+              onTap: onCode,
+            ),
+            // Divider
+            Container(width: 1, height: 24, color: colors.divider),
+            // Color tag button
+            GestureDetector(
+              onTap: onColorTag,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: currentColorTag != null
+                        ? kColorTags[currentColorTag]
+                        : colors.onSurfaceVariant.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: currentColorTag != null
+                          ? kColorTags[currentColorTag]!
+                          : colors.onSurfaceVariant,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

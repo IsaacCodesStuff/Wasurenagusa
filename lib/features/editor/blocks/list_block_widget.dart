@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/note_block_model.dart';
+import '../../../core/utils/markdown_parser.dart';
 import '../../../theme/wasurenagusa_theme.dart';
 import '../editor_controller.dart';
 
@@ -8,6 +9,10 @@ class ListBlockWidget extends StatelessWidget {
   final WasurenagusaColorScheme colors;
   final EditorController controller;
   final int blockIndex;
+  final ValueChanged<TextEditingController>? onFocusGained;
+  final VoidCallback? onFocusLost;
+  final ValueChanged<TextEditingController>? onItemFocusGained;
+  final VoidCallback? onItemFocusLost;
 
   const ListBlockWidget({
     super.key,
@@ -15,6 +20,10 @@ class ListBlockWidget extends StatelessWidget {
     required this.colors,
     required this.controller,
     required this.blockIndex,
+    this.onFocusGained,
+    this.onFocusLost,
+    this.onItemFocusGained,
+    this.onItemFocusLost,
   });
 
   @override
@@ -29,6 +38,7 @@ class ListBlockWidget extends StatelessWidget {
             final i = entry.key;
             final item = entry.value;
             return _ListItem(
+              key: ValueKey(item.id ?? i),
               item: item,
               index: i,
               isBullet: isBullet,
@@ -38,6 +48,8 @@ class ListBlockWidget extends StatelessWidget {
                 i,
                 item.copyWith(content: text),
               ),
+              onFocusGained: onItemFocusGained,
+              onFocusLost: onItemFocusLost,
               onDelete: block.items.length > 1
                   ? () => controller.removeItem(blockIndex, i)
                   : null,
@@ -82,8 +94,11 @@ class _ListItem extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final VoidCallback? onDelete;
   final VoidCallback onSubmit;
+  final ValueChanged<TextEditingController>? onFocusGained;
+  final VoidCallback? onFocusLost;
 
   const _ListItem({
+    super.key,
     required this.item,
     required this.index,
     required this.isBullet,
@@ -91,6 +106,8 @@ class _ListItem extends StatefulWidget {
     required this.onChanged,
     required this.onDelete,
     required this.onSubmit,
+    this.onFocusGained,
+    this.onFocusLost,
   });
 
   @override
@@ -99,22 +116,45 @@ class _ListItem extends StatefulWidget {
 
 class _ListItemState extends State<_ListItem> {
   late TextEditingController _controller;
+  late FocusNode _focusNode;
+  bool _isFocused = false;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.item.content);
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      final focused = _focusNode.hasFocus;
+      setState(() => _isFocused = focused);
+      if (focused) {
+        widget.onFocusGained?.call(_controller);
+      } else {
+        widget.onFocusLost?.call();
+      }
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final fontSize = ThemeRegistry.instance.selectedFontSize;
+    final markdownEnabled = ThemeRegistry.instance.markdownEnabled;
+    final showRendered =
+        markdownEnabled && !_isFocused && _controller.text.isNotEmpty;
+
+    final baseStyle = TextStyle(
+      color: widget.colors.onSurface,
+      fontSize: fontSize.textSize,
+      height: 1.5,
+    );
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -131,19 +171,49 @@ class _ListItemState extends State<_ListItem> {
           ),
         ),
         Expanded(
-          child: TextField(
-            controller: _controller,
-            style: TextStyle(color: widget.colors.onSurface, fontSize: 15),
-            decoration: InputDecoration(
-              hintText: 'Item',
-              hintStyle: TextStyle(color: widget.colors.onSurfaceVariant),
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+          child: GestureDetector(
+            onTap: () {
+              if (showRendered) {
+                setState(() => _isFocused = true);
+                _focusNode.requestFocus();
+              }
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Stack(
+              children: [
+                TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  style: baseStyle.copyWith(
+                    color: showRendered
+                        ? Colors.transparent
+                        : widget.colors.onSurface,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: showRendered ? null : 'Item',
+                    hintStyle: TextStyle(color: widget.colors.onSurfaceVariant),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  onChanged: widget.onChanged,
+                  onSubmitted: (_) => widget.onSubmit(),
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                if (showRendered)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: RichText(
+                      text: InlineMarkdown.parse(
+                        _controller.text,
+                        baseStyle: baseStyle,
+                        codeBackground: widget.colors.surfaceVariant,
+                        codeColor: widget.colors.accent,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            onChanged: widget.onChanged,
-            onSubmitted: (_) => widget.onSubmit(),
-            textCapitalization: TextCapitalization.sentences,
           ),
         ),
         if (widget.onDelete != null)

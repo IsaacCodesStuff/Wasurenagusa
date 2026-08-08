@@ -6,15 +6,21 @@ import '../../../theme/wasurenagusa_theme.dart';
 class QuoteBlockWidget extends StatefulWidget {
   final NoteBlockModel block;
   final WasurenagusaColorScheme colors;
+  final TextEditingController textController;
   final ValueChanged<String> onChanged;
   final VoidCallback onDelete;
+  final VoidCallback onFocused;
+  final VoidCallback onUnfocused;
 
   const QuoteBlockWidget({
     super.key,
     required this.block,
     required this.colors,
+    required this.textController,
     required this.onChanged,
     required this.onDelete,
+    required this.onFocused,
+    required this.onUnfocused,
   });
 
   @override
@@ -22,23 +28,26 @@ class QuoteBlockWidget extends StatefulWidget {
 }
 
 class _QuoteBlockWidgetState extends State<QuoteBlockWidget> {
-  late TextEditingController _controller;
   late FocusNode _focusNode;
   bool _isFocused = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.block.textContent);
     _focusNode = FocusNode();
     _focusNode.addListener(() {
-      setState(() => _isFocused = _focusNode.hasFocus);
+      final focused = _focusNode.hasFocus;
+      setState(() => _isFocused = focused);
+      if (focused) {
+        widget.onFocused();
+      } else {
+        widget.onUnfocused();
+      }
     });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -48,7 +57,7 @@ class _QuoteBlockWidgetState extends State<QuoteBlockWidget> {
     final fontSize = ThemeRegistry.instance.selectedFontSize;
     final markdownEnabled = ThemeRegistry.instance.markdownEnabled;
     final showRendered =
-        markdownEnabled && !_isFocused && _controller.text.isNotEmpty;
+        markdownEnabled && !_isFocused && widget.textController.text.isNotEmpty;
 
     final baseStyle = TextStyle(
       color: widget.colors.onSurfaceVariant,
@@ -72,27 +81,26 @@ class _QuoteBlockWidgetState extends State<QuoteBlockWidget> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: showRendered
-                  ? GestureDetector(
-                      onTap: () => _focusNode.requestFocus(),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: RichText(
-                          text: InlineMarkdown.parse(
-                            _controller.text,
-                            baseStyle: baseStyle,
-                            codeBackground: widget.colors.surfaceVariant,
-                            codeColor: widget.colors.accent,
-                          ),
-                        ),
-                      ),
-                    )
-                  : TextField(
-                      controller: _controller,
+              child: GestureDetector(
+                onTap: () {
+                  if (showRendered) {
+                    setState(() => _isFocused = true);
+                    _focusNode.requestFocus();
+                  }
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Stack(
+                  children: [
+                    TextField(
+                      controller: widget.textController,
                       focusNode: _focusNode,
-                      style: baseStyle,
+                      style: baseStyle.copyWith(
+                        color: showRendered
+                            ? Colors.transparent
+                            : widget.colors.onSurfaceVariant,
+                      ),
                       decoration: InputDecoration(
-                        hintText: 'Quote',
+                        hintText: showRendered ? null : 'Quote',
                         hintStyle: TextStyle(
                           color: widget.colors.onSurfaceVariant,
                           fontStyle: FontStyle.italic,
@@ -105,6 +113,21 @@ class _QuoteBlockWidgetState extends State<QuoteBlockWidget> {
                       textCapitalization: TextCapitalization.sentences,
                       onChanged: widget.onChanged,
                     ),
+                    if (showRendered)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: RichText(
+                          text: InlineMarkdown.parse(
+                            widget.textController.text,
+                            baseStyle: baseStyle,
+                            codeBackground: widget.colors.surfaceVariant,
+                            codeColor: widget.colors.accent,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

@@ -11,11 +11,10 @@ class InlineMarkdown {
     required Color codeColor,
   }) {
     final spans = <InlineSpan>[];
-    final pattern = RegExp(r'\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`');
+    final pattern = RegExp(r'\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|~~(.+?)~~');
     int lastEnd = 0;
 
     for (final match in pattern.allMatches(text)) {
-      // Plain text before this match
       if (match.start > lastEnd) {
         spans.add(
           TextSpan(
@@ -63,12 +62,22 @@ class InlineMarkdown {
             ),
           ),
         );
+      } else if (match.group(4) != null) {
+        // ~~strikethrough~~
+        spans.add(
+          TextSpan(
+            text: match.group(4),
+            style: baseStyle.copyWith(
+              decoration: TextDecoration.lineThrough,
+              decorationColor: baseStyle.color,
+            ),
+          ),
+        );
       }
 
       lastEnd = match.end;
     }
 
-    // Remaining plain text
     if (lastEnd < text.length) {
       spans.add(TextSpan(text: text.substring(lastEnd), style: baseStyle));
     }
