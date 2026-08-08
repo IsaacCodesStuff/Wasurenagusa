@@ -1,13 +1,16 @@
 import 'dart:convert';
 
-// Block types supported in v1
 enum BlockType {
   text,
   heading,
   checklist,
   numberedList,
   bulletList,
-  divider;
+  divider,
+  quote,
+  code,
+  drawing,
+  table;
 
   String get dbValue => switch (this) {
     BlockType.text => 'text',
@@ -16,6 +19,10 @@ enum BlockType {
     BlockType.numberedList => 'numbered_list',
     BlockType.bulletList => 'bullet_list',
     BlockType.divider => 'divider',
+    BlockType.quote => 'quote',
+    BlockType.code => 'code',
+    BlockType.drawing => 'drawing',
+    BlockType.table => 'table',
   };
 
   static BlockType fromDb(String value) => switch (value) {
@@ -25,11 +32,22 @@ enum BlockType {
     'numbered_list' => BlockType.numberedList,
     'bullet_list' => BlockType.bulletList,
     'divider' => BlockType.divider,
+    'quote' => BlockType.quote,
+    'code' => BlockType.code,
+    'drawing' => BlockType.drawing,
+    'table' => BlockType.table,
     _ => BlockType.text,
+  };
+
+  bool get hasTextContent => switch (this) {
+    BlockType.text => true,
+    BlockType.heading => true,
+    BlockType.quote => true,
+    BlockType.code => true,
+    _ => false,
   };
 }
 
-// A checklist/list item
 class BlockItemModel {
   final int? id;
   final String content;
@@ -56,17 +74,12 @@ class BlockItemModel {
   );
 }
 
-// The full block model used in the editor
 class NoteBlockModel {
   final int? id;
   final int noteId;
   final BlockType type;
   final int position;
-
-  // For text and heading blocks
   final String textContent;
-
-  // For checklist, numbered list, bullet list
   final List<BlockItemModel> items;
 
   const NoteBlockModel({
@@ -94,20 +107,13 @@ class NoteBlockModel {
     items: items ?? this.items,
   );
 
-  // Serialize text content to JSON for storage
   String? toJson() {
-    switch (type) {
-      case BlockType.text:
-      case BlockType.heading:
-        return jsonEncode({'text': textContent});
-      case BlockType.divider:
-        return null;
-      default:
-        return null; // items stored in block_items table
+    if (type.hasTextContent) {
+      return jsonEncode({'text': textContent});
     }
+    return null;
   }
 
-  // Deserialize text content from JSON
   static String textFromJson(String? json) {
     if (json == null) return '';
     try {

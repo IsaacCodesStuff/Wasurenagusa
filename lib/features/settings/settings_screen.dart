@@ -175,6 +175,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           SettingsSection(
+            title: 'Editor',
+            children: [
+              SettingsTile(
+                title: 'Markdown rendering',
+                subtitle: 'Format text when block is unfocused',
+                isFirst: true,
+                isLast: true,
+                trailing: Switch(
+                  value: registry.markdownEnabled,
+                  onChanged: (val) => registry.setMarkdownEnabled(val),
+                  activeThumbColor: colors.accent,
+                ),
+              ),
+            ],
+          ),
+          SettingsSection(
             title: 'About',
             children: [
               SettingsTile(

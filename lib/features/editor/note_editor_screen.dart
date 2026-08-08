@@ -9,6 +9,10 @@ import 'blocks/heading_block_widget.dart';
 import 'blocks/checklist_block_widget.dart';
 import 'blocks/list_block_widget.dart';
 import 'blocks/divider_block_widget.dart';
+import 'blocks/quote_block_widget.dart';
+import 'blocks/code_block_widget.dart';
+import 'blocks/drawing_block_widget.dart';
+import 'blocks/table_block_widget.dart';
 import '../../widgets/note_options_sheet.dart';
 import '../../core/database/app_database.dart';
 import '../../core/repositories/note_repository.dart';
@@ -31,8 +35,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   late EditorController _controller;
   final _titleController = TextEditingController();
   bool _loading = true;
+  bool _reorderMode = false;
   Note? _note;
   late NoteRepository _noteRepo;
+
+  // Tracks which block is focused for the formatting toolbar
+  int? _focusedBlockIndex;
+  final Map<int, FocusNode> _focusNodes = {};
 
   @override
   void initState() {
@@ -66,6 +75,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     _saveTitle();
     _titleController.dispose();
     _controller.dispose();
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
     super.dispose();
   }
 
@@ -76,7 +88,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     }
   }
 
-  void _showAddBlockMenu() {
+  // ── FAB grid popup ────────────────────────
+  void _showBlockPicker() {
     final colors = WasurenagusaTheme.of(context).colors;
     showModalBottomSheet(
       context: context,
@@ -86,13 +99,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       ),
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 12),
+                padding: const EdgeInsets.only(left: 4, bottom: 16),
                 child: Text(
                   'Add block',
                   style: TextStyle(
@@ -102,60 +115,98 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                   ),
                 ),
               ),
-              _AddBlockOption(
-                icon: Icons.text_fields_rounded,
-                label: 'Text',
-                colors: colors,
-                onTap: () {
-                  Navigator.pop(context);
-                  _controller.addBlock(BlockType.text);
-                },
+              GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.1,
+                children: [
+                  _BlockPickerItem(
+                    icon: Icons.text_fields_rounded,
+                    label: 'Text',
+                    colors: colors,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _controller.addBlock(BlockType.text);
+                    },
+                  ),
+                  _BlockPickerItem(
+                    icon: Icons.title_rounded,
+                    label: 'Heading',
+                    colors: colors,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _controller.addBlock(BlockType.heading);
+                    },
+                  ),
+                  _BlockPickerItem(
+                    icon: Icons.check_box_outlined,
+                    label: 'Checklist',
+                    colors: colors,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _controller.addBlock(BlockType.checklist);
+                    },
+                  ),
+                  _BlockPickerItem(
+                    icon: Icons.format_list_numbered_rounded,
+                    label: 'Numbered',
+                    colors: colors,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _controller.addBlock(BlockType.numberedList);
+                    },
+                  ),
+                  _BlockPickerItem(
+                    icon: Icons.format_list_bulleted_rounded,
+                    label: 'Bullet',
+                    colors: colors,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _controller.addBlock(BlockType.bulletList);
+                    },
+                  ),
+                  _BlockPickerItem(
+                    icon: Icons.format_quote_rounded,
+                    label: 'Quote',
+                    colors: colors,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _controller.addBlock(BlockType.quote);
+                    },
+                  ),
+                  _BlockPickerItem(
+                    icon: Icons.code_rounded,
+                    label: 'Code',
+                    colors: colors,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _controller.addBlock(BlockType.code);
+                    },
+                  ),
+                  _BlockPickerItem(
+                    icon: Icons.draw_outlined,
+                    label: 'Drawing',
+                    colors: colors,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _controller.addBlock(BlockType.drawing);
+                    },
+                  ),
+                  _BlockPickerItem(
+                    icon: Icons.table_chart_outlined,
+                    label: 'Table',
+                    colors: colors,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _controller.addBlock(BlockType.table);
+                    },
+                  ),
+                ],
               ),
-              _AddBlockOption(
-                icon: Icons.title_rounded,
-                label: 'Heading',
-                colors: colors,
-                onTap: () {
-                  Navigator.pop(context);
-                  _controller.addBlock(BlockType.heading);
-                },
-              ),
-              _AddBlockOption(
-                icon: Icons.check_box_outlined,
-                label: 'Checklist',
-                colors: colors,
-                onTap: () {
-                  Navigator.pop(context);
-                  _controller.addBlock(BlockType.checklist);
-                },
-              ),
-              _AddBlockOption(
-                icon: Icons.format_list_numbered_rounded,
-                label: 'Numbered list',
-                colors: colors,
-                onTap: () {
-                  Navigator.pop(context);
-                  _controller.addBlock(BlockType.numberedList);
-                },
-              ),
-              _AddBlockOption(
-                icon: Icons.format_list_bulleted_rounded,
-                label: 'Bullet list',
-                colors: colors,
-                onTap: () {
-                  Navigator.pop(context);
-                  _controller.addBlock(BlockType.bulletList);
-                },
-              ),
-              _AddBlockOption(
-                icon: Icons.horizontal_rule_rounded,
-                label: 'Divider',
-                colors: colors,
-                onTap: () {
-                  Navigator.pop(context);
-                  _controller.addBlock(BlockType.divider);
-                },
-              ),
+              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -172,6 +223,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       appBar: AppBar(
         title: TextField(
           controller: _titleController,
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: colors.onSurface,
             fontSize: 18,
@@ -188,89 +240,66 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             isDense: true,
             contentPadding: EdgeInsets.zero,
           ),
+          textCapitalization: TextCapitalization.sentences,
           onSubmitted: (_) => _saveTitle(),
         ),
         actions: [
+          // Reorder mode toggle
           IconButton(
-            icon: Icon(Icons.more_vert_rounded, color: colors.onSurface),
-            onPressed: _note == null
-                ? null
-                : () async {
-                    await _saveTitle();
-                    final note = await ref
-                        .read(noteRepositoryProvider)
-                        .getById(widget.noteId);
-                    if (!mounted) return;
-                    if (note != null) {
-                      _note = note;
-                      // ignore: use_build_context_synchronously
-                      await showNoteOptions(context, ref, note);
-                    }
-                    if (!mounted) return;
-                    final stillExists = await ref
-                        .read(noteRepositoryProvider)
-                        .getById(widget.noteId);
-                    if (!mounted) return;
-                    if (stillExists == null) {
-                      // ignore: use_build_context_synchronously
-                      Navigator.of(context).pop();
-                    }
-                  },
+            icon: Icon(
+              _reorderMode ? Icons.check_rounded : Icons.menu_rounded,
+              color: _reorderMode ? colors.accent : colors.onSurface,
+            ),
+            tooltip: _reorderMode ? 'Done reordering' : 'Reorder blocks',
+            onPressed: () => setState(() => _reorderMode = !_reorderMode),
           ),
         ],
       ),
+      floatingActionButton: _reorderMode
+          ? null
+          : FloatingActionButton(
+              heroTag: 'fab_editor',
+              onPressed: _showBlockPicker,
+              child: const Icon(Icons.add_rounded),
+            ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListenableBuilder(
               listenable: _controller,
               builder: (context, _) {
-                return Column(
+                return Stack(
                   children: [
-                    Expanded(
-                      child: _controller.blocks.isEmpty
-                          ? _EmptyEditor(colors: colors)
-                          : ReorderableListView.builder(
-                              padding: const EdgeInsets.only(
-                                top: 8,
-                                bottom: 96,
-                              ),
-                              itemCount: _controller.blocks.length,
-                              onReorderItem: (oldIndex, newIndex) =>
-                                  _controller.reorderBlocks(oldIndex, newIndex),
-                              itemBuilder: (context, i) {
-                                final block = _controller.blocks[i];
-                                return _buildBlock(block, i, colors);
-                              },
-                            ),
+                    Column(
+                      children: [
+                        Expanded(
+                          child: _controller.blocks.isEmpty
+                              ? _EmptyEditor(colors: colors)
+                              : _reorderMode
+                              ? _buildReorderList(colors)
+                              : _buildNormalList(colors),
+                        ),
+                      ],
                     ),
-                    // Add block button
-                    SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _showAddBlockMenu,
-                            icon: Icon(
-                              Icons.add_rounded,
-                              color: colors.accent,
-                              size: 18,
-                            ),
-                            label: Text(
-                              'Add block',
-                              style: TextStyle(color: colors.accent),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: colors.divider),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
+                    if (!_reorderMode)
+                      Positioned(
+                        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                        left: 24,
+                        right: 24,
+                        child: _FormattingToolbar(
+                          colors: colors,
+                          enabled:
+                              _focusedBlockIndex != null &&
+                              _controller.blocks.isNotEmpty &&
+                              _controller
+                                  .blocks[_focusedBlockIndex!]
+                                  .type
+                                  .hasTextContent,
+                          onBold: () => _insertFormat('**', '**'),
+                          onItalic: () => _insertFormat('*', '*'),
+                          onCode: () => _insertFormat('`', '`'),
+                          onStrikethrough: () => _insertFormat('~~', '~~'),
                         ),
                       ),
-                    ),
                   ],
                 );
               },
@@ -278,15 +307,75 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     );
   }
 
+  // ── Normal list (no drag handles, no card backgrounds) ───
+  Widget _buildNormalList(WasurenagusaColorScheme colors) {
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 8, bottom: 120),
+      itemCount: _controller.blocks.length,
+      itemBuilder: (context, i) {
+        final block = _controller.blocks[i];
+        return _buildBlock(block, i, colors, reorderMode: false);
+      },
+    );
+  }
+
+  // ── Reorder list (card backgrounds + drag handles) ───────
+  Widget _buildReorderList(WasurenagusaColorScheme colors) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+          child: Text(
+            'Drag a block to reorganize',
+            style: TextStyle(
+              color: colors.onSurfaceVariant,
+              fontSize: 13,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+        Expanded(
+          child: ReorderableListView.builder(
+            padding: const EdgeInsets.only(top: 4, bottom: 96),
+            itemCount: _controller.blocks.length,
+            onReorderItem: _controller.reorderBlocks,
+            itemBuilder: (context, i) {
+              final block = _controller.blocks[i];
+              return _ReorderCard(
+                key: ValueKey(block.id ?? i),
+                colors: colors,
+                child: _buildBlock(block, i, colors, reorderMode: true),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Format insertion ──────────────────────
+  void _insertFormat(String prefix, String suffix) {
+    final index = _focusedBlockIndex;
+    if (index == null) return;
+    final block = _controller.blocks[index];
+    if (!block.type.hasTextContent) return;
+    final current = block.textContent;
+    _controller.updateBlockText(index, '$current$prefix$suffix');
+    setState(() {});
+  }
+
   Widget _buildBlock(
     NoteBlockModel block,
     int index,
-    WasurenagusaColorScheme colors,
-  ) {
+    WasurenagusaColorScheme colors, {
+    required bool reorderMode,
+  }) {
+    final key = ValueKey(block.id ?? index);
+
     switch (block.type) {
       case BlockType.text:
         return TextBlockWidget(
-          key: ValueKey(block.id ?? index),
+          key: key,
           block: block,
           colors: colors,
           onChanged: (text) => _controller.updateBlockText(index, text),
@@ -294,7 +383,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         );
       case BlockType.heading:
         return HeadingBlockWidget(
-          key: ValueKey(block.id ?? index),
+          key: key,
           block: block,
           colors: colors,
           onChanged: (text) => _controller.updateBlockText(index, text),
@@ -302,7 +391,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         );
       case BlockType.checklist:
         return ChecklistBlockWidget(
-          key: ValueKey(block.id ?? index),
+          key: key,
           block: block,
           colors: colors,
           controller: _controller,
@@ -311,7 +400,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       case BlockType.numberedList:
       case BlockType.bulletList:
         return ListBlockWidget(
-          key: ValueKey(block.id ?? index),
+          key: key,
           block: block,
           colors: colors,
           controller: _controller,
@@ -319,7 +408,37 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         );
       case BlockType.divider:
         return DividerBlockWidget(
-          key: ValueKey(block.id ?? index),
+          key: key,
+          block: block,
+          colors: colors,
+          onDelete: () => _controller.deleteBlock(index),
+        );
+      case BlockType.quote:
+        return QuoteBlockWidget(
+          key: key,
+          block: block,
+          colors: colors,
+          onChanged: (text) => _controller.updateBlockText(index, text),
+          onDelete: () => _controller.deleteBlock(index),
+        );
+      case BlockType.code:
+        return CodeBlockWidget(
+          key: key,
+          block: block,
+          colors: colors,
+          onChanged: (text) => _controller.updateBlockText(index, text),
+          onDelete: () => _controller.deleteBlock(index),
+        );
+      case BlockType.drawing:
+        return DrawingBlockWidget(
+          key: key,
+          block: block,
+          colors: colors,
+          onDelete: () => _controller.deleteBlock(index),
+        );
+      case BlockType.table:
+        return TableBlockWidget(
+          key: key,
           block: block,
           colors: colors,
           onDelete: () => _controller.deleteBlock(index),
@@ -328,32 +447,41 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 }
 
-class _EmptyEditor extends StatelessWidget {
+// ─────────────────────────────────────────────
+// Reorder card wrapper
+// ─────────────────────────────────────────────
+
+class _ReorderCard extends StatelessWidget {
   final WasurenagusaColorScheme colors;
-  const _EmptyEditor({required this.colors});
+  final Widget child;
+
+  const _ReorderCard({super.key, required this.colors, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        'Tap "Add block" to start writing',
-        style: TextStyle(
-          color: colors.onSurfaceVariant,
-          fontSize: 14,
-          fontStyle: FontStyle.italic,
-        ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: colors.surfaceVariant,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.divider),
       ),
+      child: child,
     );
   }
 }
 
-class _AddBlockOption extends StatelessWidget {
+// ─────────────────────────────────────────────
+// Block picker item
+// ─────────────────────────────────────────────
+
+class _BlockPickerItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final WasurenagusaColorScheme colors;
   final VoidCallback onTap;
 
-  const _AddBlockOption({
+  const _BlockPickerItem({
     required this.icon,
     required this.label,
     required this.colors,
@@ -364,31 +492,176 @@ class _AddBlockOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        child: Row(
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surfaceVariant,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: colors.surfaceVariant,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: colors.accent, size: 20),
-            ),
-            const SizedBox(width: 16),
+            Icon(icon, color: colors.accent, size: 26),
+            const SizedBox(height: 8),
             Text(
               label,
               style: TextStyle(
                 color: colors.onSurface,
-                fontSize: 15,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Formatting toolbar
+// ─────────────────────────────────────────────
+
+class _FormattingToolbar extends StatelessWidget {
+  final WasurenagusaColorScheme colors;
+  final bool enabled;
+  final VoidCallback onBold;
+  final VoidCallback onItalic;
+  final VoidCallback onCode;
+  final VoidCallback onStrikethrough;
+
+  const _FormattingToolbar({
+    required this.colors,
+    required this.enabled,
+    required this.onBold,
+    required this.onItalic,
+    required this.onCode,
+    required this.onStrikethrough,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _ToolbarButton(
+            label: 'B',
+            bold: true,
+            colors: colors,
+            enabled: enabled,
+            onTap: onBold,
+          ),
+          _ToolbarButton(
+            label: 'I',
+            italic: true,
+            colors: colors,
+            enabled: enabled,
+            onTap: onItalic,
+          ),
+          _ToolbarButton(
+            label: 'S̶',
+            colors: colors,
+            enabled: enabled,
+            onTap: onStrikethrough,
+          ),
+          _ToolbarButton(
+            label: '</>',
+            mono: true,
+            colors: colors,
+            enabled: enabled,
+            onTap: onCode,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolbarButton extends StatelessWidget {
+  final String label;
+  final bool bold;
+  final bool italic;
+  final bool mono;
+  final WasurenagusaColorScheme colors;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _ToolbarButton({
+    required this.label,
+    this.bold = false,
+    this.italic = false,
+    this.mono = false,
+    required this.colors,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      child: SizedBox(
+        width: 52,
+        height: 48,
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: enabled ? colors.onSurface : colors.onSurfaceVariant,
+              fontSize: 15,
+              fontWeight: bold ? FontWeight.w800 : FontWeight.w400,
+              fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+              fontFamily: mono ? 'monospace' : null,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Empty editor state
+// ─────────────────────────────────────────────
+
+class _EmptyEditor extends StatelessWidget {
+  final WasurenagusaColorScheme colors;
+  const _EmptyEditor({required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.edit_note_rounded,
+            color: colors.onSurfaceVariant,
+            size: 48,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Tap + to add a block',
+            style: TextStyle(
+              color: colors.onSurfaceVariant,
+              fontSize: 14,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ),
     );
   }

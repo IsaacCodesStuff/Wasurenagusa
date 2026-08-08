@@ -557,6 +557,15 @@ class ThemeRegistry extends ChangeNotifier {
   WasurenagusaFontSize _fontSize = WasurenagusaFontSize.medium;
   WasurenagusaFontSize get selectedFontSize => _fontSize;
 
+  bool _markdownEnabled = true;
+  bool get markdownEnabled => _markdownEnabled;
+
+  void setMarkdownEnabled(bool value) {
+    _markdownEnabled = value;
+    _save();
+    notifyListeners();
+  }
+
   void selectFontSize(WasurenagusaFontSize size) {
     _fontSize = size;
     _save();
@@ -587,6 +596,8 @@ class ThemeRegistry extends ChangeNotifier {
 
   Future<void> loadFromPrefs(SharedPreferences prefs) async {
     final modeStr = prefs.getString(_keyMode);
+    _markdownEnabled = prefs.getBool('markdown_enabled') ?? true;
+
     if (modeStr != null) {
       _mode = WasurenagusaMode.values.firstWhere(
         (m) => m.name == modeStr,
@@ -614,6 +625,7 @@ class ThemeRegistry extends ChangeNotifier {
       prefs.setString(_keyMode, _mode.name);
       prefs.setString(_keyPalette, _palette.name);
       prefs.setString('font_size', _fontSize.name);
+      prefs.setBool('markdown_enabled', _markdownEnabled);
     });
   }
 }
