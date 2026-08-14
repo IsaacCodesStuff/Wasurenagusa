@@ -11,13 +11,11 @@ class EditorController extends ChangeNotifier {
   final Map<int, TextEditingController> textControllers = {};
   int focusedBlockId = -1;
 
-  // Call this when a block gains focus
   void onBlockFocused(int blockId) {
     focusedBlockId = blockId;
     notifyListeners();
   }
 
-  // Call this when a block loses focus
   void onBlockUnfocused(int blockId) {
     if (focusedBlockId == blockId) {
       focusedBlockId = -1;
@@ -25,7 +23,6 @@ class EditorController extends ChangeNotifier {
     }
   }
 
-  // Get or create a TextEditingController for a block
   TextEditingController controllerFor(NoteBlockModel block) {
     return textControllers.putIfAbsent(
       block.id!,
@@ -33,7 +30,6 @@ class EditorController extends ChangeNotifier {
     );
   }
 
-  // Insert text at cursor in the focused block
   void insertAtCursor(String prefix, String suffix) {
     if (focusedBlockId == -1) return;
     final tc = textControllers[focusedBlockId];
@@ -43,7 +39,6 @@ class EditorController extends ChangeNotifier {
     final text = tc.text;
 
     if (!selection.isValid) {
-      // No cursor position — just append
       tc.text = '$text$prefix$suffix';
       tc.selection = TextSelection.collapsed(
         offset: tc.text.length - suffix.length,
@@ -63,7 +58,6 @@ class EditorController extends ChangeNotifier {
       ),
     );
 
-    // Persist to DB
     final blockIndex = _blocks.indexWhere((b) => b.id == focusedBlockId);
     if (blockIndex != -1) {
       updateBlockText(blockIndex, tc.text);
@@ -87,7 +81,6 @@ class EditorController extends ChangeNotifier {
     required this.noteRepo,
   });
 
-  // Load blocks from database
   Future<void> loadBlocks() async {
     final dbBlocks = await blockRepo.getByNote(noteId);
     _blocks.clear();
@@ -111,7 +104,6 @@ class EditorController extends ChangeNotifier {
             )
             .toList();
 
-        // Ensure at least one empty item
         if (items.isEmpty) {
           items = [BlockItemModel(content: '', position: 0)];
         }
@@ -125,6 +117,9 @@ class EditorController extends ChangeNotifier {
           position: dbBlock.position,
           textContent: NoteBlockModel.textFromJson(dbBlock.content),
           items: items,
+          drawingData: type == BlockType.drawing
+              ? NoteBlockModel.drawingFromJson(dbBlock.content)
+              : null,
         ),
       );
     }
@@ -132,7 +127,6 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Add a new block at the end
   Future<void> addBlock(BlockType type) async {
     final position = _blocks.length;
     final id = await blockRepo.createBlock(
@@ -160,13 +154,13 @@ class EditorController extends ChangeNotifier {
         type: type,
         position: position,
         items: items,
+        drawingData: type == BlockType.drawing ? DrawingData.empty() : null,
       ),
     );
 
     notifyListeners();
   }
 
-  // Update text content of a text/heading block
   Future<void> updateBlockText(int index, String text) async {
     final block = _blocks[index];
     final updated = block.copyWith(textContent: text);
@@ -178,10 +172,23 @@ class EditorController extends ChangeNotifier {
         dbBlock.copyWith(content: Value(updated.toJson())),
       );
     }
-    // No notifyListeners here — text field manages its own state
   }
 
-  // Update a checklist/list item
+  // Save drawing data for a drawing block
+  Future<void> updateDrawingData(int index, DrawingData data) async {
+    final block = _blocks[index];
+    final updated = block.copyWith(drawingData: data);
+    _blocks[index] = updated;
+
+    final dbBlock = await _getDbBlock(block.id!);
+    if (dbBlock != null) {
+      await blockRepo.updateBlock(
+        dbBlock.copyWith(content: Value(updated.toJson())),
+      );
+    }
+    notifyListeners();
+  }
+
   Future<void> updateItem(
     int blockIndex,
     int itemIndex,
@@ -206,7 +213,6 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Add an item to a list block
   Future<void> addItem(int blockIndex) async {
     final block = _blocks[blockIndex];
     final position = block.items.length;
@@ -221,10 +227,9 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Remove an item from a list block
   Future<void> removeItem(int blockIndex, int itemIndex) async {
     final block = _blocks[blockIndex];
-    if (block.items.length <= 1) return; // keep at least one item
+    if (block.items.length <= 1) return;
     final item = block.items[itemIndex];
     if (item.id != null) await blockRepo.deleteItem(item.id!);
     final newItems = List<BlockItemModel>.from(block.items)
@@ -233,7 +238,6 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Delete a block
   Future<void> deleteBlock(int index) async {
     final block = _blocks[index];
     if (block.id != null) await blockRepo.deleteBlock(block.id!);
@@ -241,11 +245,9 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Reorder blocks
   Future<void> reorderBlocks(int oldIndex, int newIndex) async {
     final block = _blocks.removeAt(oldIndex);
     _blocks.insert(newIndex, block);
-    // Update positions in DB
     final dbBlocks = await blockRepo.getByNote(noteId);
     final reordered = <dynamic>[];
     for (int i = 0; i < _blocks.length; i++) {
@@ -256,7 +258,6 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Helpers
   Future<dynamic> _getDbBlock(int id) async {
     final blocks = await blockRepo.getByNote(noteId);
     try {
@@ -267,7 +268,6 @@ class EditorController extends ChangeNotifier {
   }
 
   Future<dynamic> _getDbItem(int id) async {
-    // We need to search through all blocks
     final blocks = await blockRepo.getByNote(noteId);
     for (final block in blocks) {
       final items = await blockRepo.getItems(block.id);

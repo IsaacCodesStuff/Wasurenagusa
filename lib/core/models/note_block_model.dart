@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 
 enum BlockType {
   text,
@@ -48,6 +49,68 @@ enum BlockType {
   };
 }
 
+// ─────────────────────────────────────────────
+// Drawing data model
+// ─────────────────────────────────────────────
+
+class DrawingStroke {
+  final Color color;
+  final double width;
+  final List<Offset> points;
+
+  const DrawingStroke({
+    required this.color,
+    required this.width,
+    required this.points,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'color': color.value,
+    'width': width,
+    'points': points.map((p) => [p.dx, p.dy]).toList(),
+  };
+
+  factory DrawingStroke.fromMap(Map<String, dynamic> map) => DrawingStroke(
+    color: Color(map['color'] as int),
+    width: (map['width'] as num).toDouble(),
+    points: (map['points'] as List)
+        .map((p) => Offset((p[0] as num).toDouble(), (p[1] as num).toDouble()))
+        .toList(),
+  );
+}
+
+class DrawingData {
+  static const int currentVersion = 1;
+
+  final int version;
+  final List<DrawingStroke> strokes;
+
+  const DrawingData({this.version = currentVersion, required this.strokes});
+
+  DrawingData copyWith({List<DrawingStroke>? strokes}) =>
+      DrawingData(version: version, strokes: strokes ?? this.strokes);
+
+  bool get isEmpty => strokes.isEmpty;
+
+  Map<String, dynamic> toMap() => {
+    'version': version,
+    'strokes': strokes.map((s) => s.toMap()).toList(),
+  };
+
+  factory DrawingData.fromMap(Map<String, dynamic> map) => DrawingData(
+    version: map['version'] as int? ?? 1,
+    strokes: (map['strokes'] as List? ?? [])
+        .map((s) => DrawingStroke.fromMap(s as Map<String, dynamic>))
+        .toList(),
+  );
+
+  static DrawingData empty() => const DrawingData(strokes: []);
+}
+
+// ─────────────────────────────────────────────
+// Block item model
+// ─────────────────────────────────────────────
+
 class BlockItemModel {
   final int? id;
   final String content;
@@ -74,6 +137,10 @@ class BlockItemModel {
   );
 }
 
+// ─────────────────────────────────────────────
+// Note block model
+// ─────────────────────────────────────────────
+
 class NoteBlockModel {
   final int? id;
   final int noteId;
@@ -81,6 +148,7 @@ class NoteBlockModel {
   final int position;
   final String textContent;
   final List<BlockItemModel> items;
+  final DrawingData? drawingData;
 
   const NoteBlockModel({
     this.id,
@@ -89,6 +157,7 @@ class NoteBlockModel {
     required this.position,
     this.textContent = '',
     this.items = const [],
+    this.drawingData,
   });
 
   NoteBlockModel copyWith({
@@ -98,6 +167,7 @@ class NoteBlockModel {
     int? position,
     String? textContent,
     List<BlockItemModel>? items,
+    DrawingData? drawingData,
   }) => NoteBlockModel(
     id: id ?? this.id,
     noteId: noteId ?? this.noteId,
@@ -105,11 +175,15 @@ class NoteBlockModel {
     position: position ?? this.position,
     textContent: textContent ?? this.textContent,
     items: items ?? this.items,
+    drawingData: drawingData ?? this.drawingData,
   );
 
   String? toJson() {
     if (type.hasTextContent) {
       return jsonEncode({'text': textContent});
+    }
+    if (type == BlockType.drawing) {
+      return jsonEncode((drawingData ?? DrawingData.empty()).toMap());
     }
     return null;
   }
@@ -121,6 +195,18 @@ class NoteBlockModel {
       return map['text'] as String? ?? '';
     } catch (_) {
       return '';
+    }
+  }
+
+  static DrawingData drawingFromJson(String? json) {
+    if (json == null) return DrawingData.empty();
+    try {
+      final map = jsonDecode(json) as Map<String, dynamic>;
+      // Guard: only parse if it looks like drawing data
+      if (!map.containsKey('strokes')) return DrawingData.empty();
+      return DrawingData.fromMap(map);
+    } catch (_) {
+      return DrawingData.empty();
     }
   }
 }

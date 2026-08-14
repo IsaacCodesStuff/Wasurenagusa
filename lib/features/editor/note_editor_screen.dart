@@ -645,6 +645,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           block: block,
           colors: colors,
           onDelete: () => _controller.deleteBlock(index),
+          onSave: (data) => _controller.updateDrawingData(index, data),
         );
       case BlockType.table:
         return TableBlockWidget(
