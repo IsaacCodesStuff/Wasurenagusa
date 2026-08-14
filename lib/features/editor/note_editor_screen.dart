@@ -201,6 +201,98 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     );
   }
 
+  void _showTableSizePicker() {
+    final colors = WasurenagusaTheme.of(context).colors;
+    int hoveredRow = 2;
+    int hoveredCol = 2;
+    const maxR = 6;
+    const maxC = 6;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Table size',
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${hoveredRow + 1} × ${hoveredCol + 1}',
+                  style: TextStyle(
+                    color: colors.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Tap grid
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (int r = 0; r < maxR; r++)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (int c = 0; c < maxC; c++)
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                _controller.addBlock(
+                                  BlockType.table,
+                                  initialTableData: TableData.empty(
+                                    rows: r + 1,
+                                    cols: c + 1,
+                                  ),
+                                );
+                              },
+                              onTapDown: (_) => setSheet(() {
+                                hoveredRow = r;
+                                hoveredCol = c;
+                              }),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 80),
+                                width: 36,
+                                height: 36,
+                                margin: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: r <= hoveredRow && c <= hoveredCol
+                                      ? colors.accent.withValues(alpha: 0.2)
+                                      : colors.surfaceVariant,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: r <= hoveredRow && c <= hoveredCol
+                                        ? colors.accent
+                                        : colors.divider,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── FAB grid popup ────────────────────────
   void _showBlockPicker() {
     final colors = WasurenagusaTheme.of(context).colors;
@@ -314,7 +406,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                     colors: colors,
                     onTap: () {
                       Navigator.pop(context);
-                      _controller.addBlock(BlockType.table);
+                      _showTableSizePicker();
                     },
                   ),
                 ],
@@ -652,6 +744,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           block: block,
           colors: colors,
           onDelete: () => _controller.deleteBlock(index),
+          onSave: (data) => _controller.updateTableData(index, data),
         );
     }
   }

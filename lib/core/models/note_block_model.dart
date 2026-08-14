@@ -65,7 +65,7 @@ class DrawingStroke {
   });
 
   Map<String, dynamic> toMap() => {
-    'color': color.value,
+    'color': color.toARGB32(),
     'width': width,
     'points': points.map((p) => [p.dx, p.dy]).toList(),
   };
@@ -105,6 +105,84 @@ class DrawingData {
   );
 
   static DrawingData empty() => const DrawingData(strokes: []);
+}
+
+// ─────────────────────────────────────────────
+// Table data model
+// ─────────────────────────────────────────────
+
+class TableData {
+  final int rows;
+  final int cols;
+  final List<List<String>> cells;
+
+  const TableData({
+    required this.rows,
+    required this.cols,
+    required this.cells,
+  });
+
+  factory TableData.empty({int rows = 3, int cols = 3}) => TableData(
+    rows: rows,
+    cols: cols,
+    cells: List.generate(rows, (_) => List.generate(cols, (_) => '')),
+  );
+
+  TableData copyWith({int? rows, int? cols, List<List<String>>? cells}) =>
+      TableData(
+        rows: rows ?? this.rows,
+        cols: cols ?? this.cols,
+        cells: cells ?? this.cells,
+      );
+
+  /// Returns a new TableData with the value at [row][col] updated.
+  TableData withCell(int row, int col, String value) {
+    final newCells = cells.map((r) => List<String>.from(r)).toList();
+    newCells[row][col] = value;
+    return copyWith(cells: newCells);
+  }
+
+  /// Add a row at the bottom.
+  TableData addRow() {
+    final newCells = cells.map((r) => List<String>.from(r)).toList()
+      ..add(List.generate(cols, (_) => ''));
+    return copyWith(rows: rows + 1, cells: newCells);
+  }
+
+  /// Add a column on the right.
+  TableData addCol() {
+    final newCells = cells.map((r) => List<String>.from(r)..add('')).toList();
+    return copyWith(cols: cols + 1, cells: newCells);
+  }
+
+  /// Remove the last row (minimum 1).
+  TableData removeRow() {
+    if (rows <= 1) return this;
+    final newCells = cells.map((r) => List<String>.from(r)).toList()
+      ..removeLast();
+    return copyWith(rows: rows - 1, cells: newCells);
+  }
+
+  /// Remove the last column (minimum 1).
+  TableData removeCol() {
+    if (cols <= 1) return this;
+    final newCells = cells
+        .map((r) => List<String>.from(r)..removeLast())
+        .toList();
+    return copyWith(cols: cols - 1, cells: newCells);
+  }
+
+  Map<String, dynamic> toMap() => {'rows': rows, 'cols': cols, 'cells': cells};
+
+  factory TableData.fromMap(Map<String, dynamic> map) {
+    final rows = map['rows'] as int;
+    final cols = map['cols'] as int;
+    final rawCells = map['cells'] as List;
+    final cells = rawCells
+        .map((row) => (row as List).map((c) => c as String).toList())
+        .toList();
+    return TableData(rows: rows, cols: cols, cells: cells);
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -149,6 +227,7 @@ class NoteBlockModel {
   final String textContent;
   final List<BlockItemModel> items;
   final DrawingData? drawingData;
+  final TableData? tableData;
 
   const NoteBlockModel({
     this.id,
@@ -158,6 +237,7 @@ class NoteBlockModel {
     this.textContent = '',
     this.items = const [],
     this.drawingData,
+    this.tableData,
   });
 
   NoteBlockModel copyWith({
@@ -168,6 +248,7 @@ class NoteBlockModel {
     String? textContent,
     List<BlockItemModel>? items,
     DrawingData? drawingData,
+    TableData? tableData,
   }) => NoteBlockModel(
     id: id ?? this.id,
     noteId: noteId ?? this.noteId,
@@ -176,6 +257,7 @@ class NoteBlockModel {
     textContent: textContent ?? this.textContent,
     items: items ?? this.items,
     drawingData: drawingData ?? this.drawingData,
+    tableData: tableData ?? this.tableData,
   );
 
   String? toJson() {
@@ -184,6 +266,9 @@ class NoteBlockModel {
     }
     if (type == BlockType.drawing) {
       return jsonEncode((drawingData ?? DrawingData.empty()).toMap());
+    }
+    if (type == BlockType.table) {
+      return jsonEncode((tableData ?? TableData.empty()).toMap());
     }
     return null;
   }
@@ -202,11 +287,21 @@ class NoteBlockModel {
     if (json == null) return DrawingData.empty();
     try {
       final map = jsonDecode(json) as Map<String, dynamic>;
-      // Guard: only parse if it looks like drawing data
       if (!map.containsKey('strokes')) return DrawingData.empty();
       return DrawingData.fromMap(map);
     } catch (_) {
       return DrawingData.empty();
+    }
+  }
+
+  static TableData tableFromJson(String? json) {
+    if (json == null) return TableData.empty();
+    try {
+      final map = jsonDecode(json) as Map<String, dynamic>;
+      if (!map.containsKey('cells')) return TableData.empty();
+      return TableData.fromMap(map);
+    } catch (_) {
+      return TableData.empty();
     }
   }
 }

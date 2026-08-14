@@ -120,6 +120,9 @@ class EditorController extends ChangeNotifier {
           drawingData: type == BlockType.drawing
               ? NoteBlockModel.drawingFromJson(dbBlock.content)
               : null,
+          tableData: type == BlockType.table
+              ? NoteBlockModel.tableFromJson(dbBlock.content)
+              : null,
         ),
       );
     }
@@ -127,12 +130,26 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addBlock(BlockType type) async {
+  Future<void> addBlock(BlockType type, {TableData? initialTableData}) async {
     final position = _blocks.length;
+
+    // Serialize initial content for table blocks
+    String? initialContent;
+    if (type == BlockType.table) {
+      final data = initialTableData ?? TableData.empty();
+      initialContent = NoteBlockModel(
+        noteId: noteId,
+        type: type,
+        position: position,
+        tableData: data,
+      ).toJson();
+    }
+
     final id = await blockRepo.createBlock(
       noteId: noteId,
       type: type.dbValue,
       position: position,
+      content: initialContent,
     );
 
     List<BlockItemModel> items = [];
@@ -155,6 +172,9 @@ class EditorController extends ChangeNotifier {
         position: position,
         items: items,
         drawingData: type == BlockType.drawing ? DrawingData.empty() : null,
+        tableData: type == BlockType.table
+            ? (initialTableData ?? TableData.empty())
+            : null,
       ),
     );
 
@@ -174,10 +194,23 @@ class EditorController extends ChangeNotifier {
     }
   }
 
-  // Save drawing data for a drawing block
   Future<void> updateDrawingData(int index, DrawingData data) async {
     final block = _blocks[index];
     final updated = block.copyWith(drawingData: data);
+    _blocks[index] = updated;
+
+    final dbBlock = await _getDbBlock(block.id!);
+    if (dbBlock != null) {
+      await blockRepo.updateBlock(
+        dbBlock.copyWith(content: Value(updated.toJson())),
+      );
+    }
+    notifyListeners();
+  }
+
+  Future<void> updateTableData(int index, TableData data) async {
+    final block = _blocks[index];
+    final updated = block.copyWith(tableData: data);
     _blocks[index] = updated;
 
     final dbBlock = await _getDbBlock(block.id!);
