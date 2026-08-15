@@ -72,8 +72,12 @@ class _TableBlockWidgetState extends State<TableBlockWidget> {
   }
 
   void _disposeControllers() {
-    for (final tc in _controllers.values) tc.dispose();
-    for (final fn in _focusNodes.values) fn.dispose();
+    for (final tc in _controllers.values) {
+      tc.dispose();
+    }
+    for (final fn in _focusNodes.values) {
+      fn.dispose();
+    }
     _controllers.clear();
     _focusNodes.clear();
   }
