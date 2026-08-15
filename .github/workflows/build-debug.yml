@@ -1,0 +1,47 @@
+name: Build Debug APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Verify pubspec.lock is committed
+        run: |
+          if [ ! -f pubspec.lock ]; then
+            echo "pubspec.lock not found — commit it for reproducible builds"
+            exit 1
+          fi
+
+      - name: Run build_runner (Drift codegen)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build debug APK
+        run: flutter build apk --debug --target-platform android-arm64
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasurenagusa-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
