@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/models/note_block_model.dart';
 import '../../../theme/wasurenagusa_theme.dart';
@@ -22,9 +23,9 @@ class TableBlockWidget extends StatefulWidget {
 
 class _TableBlockWidgetState extends State<TableBlockWidget> {
   late TableData _data;
-  // Keyed by "row,col"
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, FocusNode> _focusNodes = {};
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -36,11 +37,38 @@ class _TableBlockWidgetState extends State<TableBlockWidget> {
   void _initControllers() {
     for (int r = 0; r < _data.rows; r++) {
       for (int c = 0; c < _data.cols; c++) {
-        final key = '$r,$c';
-        _controllers[key] = TextEditingController(text: _data.cells[r][c]);
-        _focusNodes[key] = FocusNode();
+        _createCell(r, c, _data.cells[r][c]);
       }
     }
+  }
+
+  void _createCell(int r, int c, String initialText) {
+    final key = '$r,$c';
+    final tc = TextEditingController(text: initialText);
+    final fn = FocusNode();
+    tc.addListener(() => _onCellChanged(r, c));
+    _controllers[key] = tc;
+    _focusNodes[key] = fn;
+  }
+
+  void _onCellChanged(int row, int col) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _saveAllCells();
+    });
+  }
+
+  Future<void> _saveAllCells() async {
+    var newData = _data;
+    for (int r = 0; r < _data.rows; r++) {
+      for (int c = 0; c < _data.cols; c++) {
+        final key = '$r,$c';
+        final value = _controllers[key]?.text ?? '';
+        newData = newData.withCell(r, c, value);
+      }
+    }
+    _data = newData;
+    await widget.onSave(newData);
   }
 
   void _disposeControllers() {
@@ -50,55 +78,45 @@ class _TableBlockWidgetState extends State<TableBlockWidget> {
     _focusNodes.clear();
   }
 
-  void _rebuildControllers(TableData newData) {
-    // Dispose old, rebuild for new dimensions
+  Future<void> _rebuildWith(TableData newData) async {
+    // Flush current text into newData before rebuilding
+    // so we don't lose content that was typed but not yet saved
+    var flushed = newData;
+    for (int r = 0; r < _data.rows && r < newData.rows; r++) {
+      for (int c = 0; c < _data.cols && c < newData.cols; c++) {
+        final key = '$r,$c';
+        final value = _controllers[key]?.text ?? '';
+        flushed = flushed.withCell(r, c, value);
+      }
+    }
     _disposeControllers();
-    _data = newData;
-    _initControllers();
-  }
-
-  @override
-  void dispose() {
-    _disposeControllers();
-    super.dispose();
-  }
-
-  Future<void> _saveCell(int row, int col) async {
-    final key = '$row,$col';
-    final value = _controllers[key]?.text ?? '';
-    final newData = _data.withCell(row, col, value);
-    _data = newData;
-    await widget.onSave(newData);
-  }
-
-  Future<void> _addRow() async {
-    final newData = _data.addRow();
-    _rebuildControllers(newData);
+    _data = flushed;
+    for (int r = 0; r < _data.rows; r++) {
+      for (int c = 0; c < _data.cols; c++) {
+        _createCell(r, c, _data.cells[r][c]);
+      }
+    }
     setState(() {});
-    await widget.onSave(newData);
+    await widget.onSave(_data);
   }
 
-  Future<void> _addCol() async {
-    final newData = _data.addCol();
-    _rebuildControllers(newData);
-    setState(() {});
-    await widget.onSave(newData);
-  }
-
+  Future<void> _addRow() => _rebuildWith(_data.addRow());
+  Future<void> _addCol() => _rebuildWith(_data.addCol());
   Future<void> _removeRow() async {
     if (_data.rows <= 1) return;
-    final newData = _data.removeRow();
-    _rebuildControllers(newData);
-    setState(() {});
-    await widget.onSave(newData);
+    await _rebuildWith(_data.removeRow());
   }
 
   Future<void> _removeCol() async {
     if (_data.cols <= 1) return;
-    final newData = _data.removeCol();
-    _rebuildControllers(newData);
-    setState(() {});
-    await widget.onSave(newData);
+    await _rebuildWith(_data.removeCol());
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _disposeControllers();
+    super.dispose();
   }
 
   @override
@@ -138,7 +156,6 @@ class _TableBlockWidgetState extends State<TableBlockWidget> {
                             isFirstRow: r == 0,
                             isFirstCol: c == 0,
                             colors: colors,
-                            onEditingComplete: () => _saveCell(r, c),
                           ),
                       ],
                     ),
@@ -151,7 +168,6 @@ class _TableBlockWidgetState extends State<TableBlockWidget> {
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
               child: Row(
                 children: [
-                  // Row controls
                   _TableControlButton(
                     icon: Icons.remove_rounded,
                     label: 'Row',
@@ -168,7 +184,6 @@ class _TableBlockWidgetState extends State<TableBlockWidget> {
                     onTap: _addRow,
                   ),
                   const SizedBox(width: 12),
-                  // Col controls
                   _TableControlButton(
                     icon: Icons.remove_rounded,
                     label: 'Col',
@@ -185,7 +200,6 @@ class _TableBlockWidgetState extends State<TableBlockWidget> {
                     onTap: _addCol,
                   ),
                   const Spacer(),
-                  // Delete block
                   GestureDetector(
                     onTap: widget.onDelete,
                     child: Icon(
@@ -216,7 +230,6 @@ class _Cell extends StatelessWidget {
   final bool isFirstRow;
   final bool isFirstCol;
   final WasurenagusaColorScheme colors;
-  final VoidCallback onEditingComplete;
 
   const _Cell({
     super.key,
@@ -227,7 +240,6 @@ class _Cell extends StatelessWidget {
     required this.isFirstRow,
     required this.isFirstCol,
     required this.colors,
-    required this.onEditingComplete,
   });
 
   @override
@@ -262,13 +274,6 @@ class _Cell extends StatelessWidget {
           contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         ),
         textCapitalization: TextCapitalization.sentences,
-        onEditingComplete: onEditingComplete,
-        onTapOutside: (_) {
-          if (focusNode.hasFocus) {
-            focusNode.unfocus();
-            onEditingComplete();
-          }
-        },
       ),
     );
   }

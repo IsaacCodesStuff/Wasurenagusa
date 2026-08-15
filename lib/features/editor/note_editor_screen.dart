@@ -203,10 +203,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   void _showTableSizePicker() {
     final colors = WasurenagusaTheme.of(context).colors;
-    int hoveredRow = 2;
-    int hoveredCol = 2;
+    int selectedRow = 0;
+    int selectedCol = 0;
     const maxR = 6;
-    const maxC = 6;
+    const maxC = 9;
 
     showModalBottomSheet(
       context: context,
@@ -232,14 +232,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${hoveredRow + 1} × ${hoveredCol + 1}',
+                  '${selectedRow + 1} rows × ${selectedCol + 1} columns  •  row 1 is the header',
                   style: TextStyle(
                     color: colors.onSurfaceVariant,
                     fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Tap grid
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -249,32 +248,22 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                         children: [
                           for (int c = 0; c < maxC; c++)
                             GestureDetector(
-                              onTap: () {
-                                Navigator.pop(ctx);
-                                _controller.addBlock(
-                                  BlockType.table,
-                                  initialTableData: TableData.empty(
-                                    rows: r + 1,
-                                    cols: c + 1,
-                                  ),
-                                );
-                              },
-                              onTapDown: (_) => setSheet(() {
-                                hoveredRow = r;
-                                hoveredCol = c;
+                              onTap: () => setSheet(() {
+                                selectedRow = r;
+                                selectedCol = c;
                               }),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 80),
-                                width: 36,
-                                height: 36,
+                                width: 30,
+                                height: 30,
                                 margin: const EdgeInsets.all(2),
                                 decoration: BoxDecoration(
-                                  color: r <= hoveredRow && c <= hoveredCol
+                                  color: r <= selectedRow && c <= selectedCol
                                       ? colors.accent.withValues(alpha: 0.2)
                                       : colors.surfaceVariant,
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(5),
                                   border: Border.all(
-                                    color: r <= hoveredRow && c <= hoveredCol
+                                    color: r <= selectedRow && c <= selectedCol
                                         ? colors.accent
                                         : colors.divider,
                                   ),
@@ -284,6 +273,39 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                         ],
                       ),
                   ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.accent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      final rows = selectedRow + 1;
+                      final cols = selectedCol + 1;
+                      Navigator.pop(ctx);
+                      _controller.addBlock(
+                        BlockType.table,
+                        initialTableData: TableData.empty(
+                          rows: rows,
+                          cols: cols,
+                        ),
+                      );
+                    },
+                    child: Text(
+                      'Create ${selectedRow + 1} × ${selectedCol + 1} table  (1 header + $selectedRow data rows)',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
