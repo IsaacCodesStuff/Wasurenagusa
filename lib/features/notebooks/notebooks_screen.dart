@@ -144,40 +144,43 @@ class NotebooksScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.edit_outlined, color: colors.onSurface),
-                title: Text(
-                  'Rename',
-                  style: TextStyle(color: colors.onSurface),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Icon(Icons.edit_outlined, color: colors.onSurface),
+                  title: Text(
+                    'Rename',
+                    style: TextStyle(color: colors.onSurface),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRenameDialog(context, ref, notebook);
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showRenameDialog(context, ref, notebook);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.delete_outline, color: colors.onSurface),
-                title: Text(
-                  'Delete',
-                  style: TextStyle(color: colors.onSurface),
+                ListTile(
+                  leading: Icon(Icons.delete_outline, color: colors.onSurface),
+                  title: Text(
+                    'Delete',
+                    style: TextStyle(color: colors.onSurface),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await ref
+                        .read(notebookRepositoryProvider)
+                        .delete(notebook.id);
+                  },
                 ),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await ref
-                      .read(notebookRepositoryProvider)
-                      .delete(notebook.id);
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

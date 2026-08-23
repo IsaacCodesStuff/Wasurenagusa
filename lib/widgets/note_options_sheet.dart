@@ -24,9 +24,9 @@ Future<void> showNoteOptions(
   final colors = WasurenagusaTheme.of(context).colors;
 
   await showModalBottomSheet(
-    // add await
     context: context,
     backgroundColor: colors.surface,
+    isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -354,94 +354,95 @@ class _NoteOptionsSheetState extends ConsumerState<_NoteOptionsSheet> {
   Widget build(BuildContext context) {
     final colors = widget.colors;
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Note title header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-              child: Row(
-                children: [
-                  if (_note.colorTag != null)
-                    Container(
-                      width: 12,
-                      height: 12,
-                      margin: const EdgeInsets.only(right: 10),
-                      decoration: BoxDecoration(
-                        color: kColorTags[_note.colorTag],
-                        shape: BoxShape.circle,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Note title header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Row(
+                  children: [
+                    if (_note.colorTag != null)
+                      Container(
+                        width: 12,
+                        height: 12,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          color: kColorTags[_note.colorTag],
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    Expanded(
+                      child: Text(
+                        _note.title.isEmpty ? 'Untitled' : _note.title,
+                        style: TextStyle(
+                          color: colors.onSurface,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  Expanded(
-                    child: Text(
-                      _note.title.isEmpty ? 'Untitled' : _note.title,
-                      style: TextStyle(
-                        color: colors.onSurface,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Divider(height: 1, color: colors.divider),
-            const SizedBox(height: 8),
-
-            _OptionTile(
-              icon: _note.isPinned
-                  ? Icons.push_pin_rounded
-                  : Icons.push_pin_outlined,
-              label: _note.isPinned ? 'Unpin' : 'Pin',
-              colors: colors,
-              onTap: _togglePin,
-            ),
-            _OptionTile(
-              icon: Icons.edit_outlined,
-              label: 'Rename',
-              colors: colors,
-              onTap: _showRenameDialog,
-            ),
-            _OptionTile(
-              icon: Icons.circle_outlined,
-              label: 'Color tag',
-              colors: colors,
-              trailing: _note.colorTag != null
-                  ? Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: kColorTags[_note.colorTag],
-                        shape: BoxShape.circle,
-                      ),
-                    )
-                  : null,
-              onTap: _showColorTagPicker,
-            ),
-            _OptionTile(
-              icon: Icons.drive_file_move_outlined,
-              label: 'Move to section',
-              colors: colors,
-              onTap: _showMoveToSection,
-            ),
-            _OptionTile(
-              icon: Icons.copy_outlined,
-              label: 'Duplicate',
-              colors: colors,
-              onTap: _duplicate,
-            ),
-            _OptionTile(
-              icon: Icons.delete_outline,
-              label: 'Delete',
-              colors: colors,
-              isDestructive: true,
-              onTap: _showDeleteConfirm,
-            ),
-          ],
+              Divider(height: 1, color: colors.divider),
+              const SizedBox(height: 8),
+              _OptionTile(
+                icon: _note.isPinned
+                    ? Icons.push_pin_rounded
+                    : Icons.push_pin_outlined,
+                label: _note.isPinned ? 'Unpin' : 'Pin',
+                colors: colors,
+                onTap: _togglePin,
+              ),
+              _OptionTile(
+                icon: Icons.edit_outlined,
+                label: 'Rename',
+                colors: colors,
+                onTap: _showRenameDialog,
+              ),
+              _OptionTile(
+                icon: Icons.circle_outlined,
+                label: 'Color tag',
+                colors: colors,
+                trailing: _note.colorTag != null
+                    ? Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: kColorTags[_note.colorTag],
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                    : null,
+                onTap: _showColorTagPicker,
+              ),
+              _OptionTile(
+                icon: Icons.drive_file_move_outlined,
+                label: 'Move to section',
+                colors: colors,
+                onTap: _showMoveToSection,
+              ),
+              _OptionTile(
+                icon: Icons.copy_outlined,
+                label: 'Duplicate',
+                colors: colors,
+                onTap: _duplicate,
+              ),
+              _OptionTile(
+                icon: Icons.delete_outline,
+                label: 'Delete',
+                colors: colors,
+                isDestructive: true,
+                onTap: _showDeleteConfirm,
+              ),
+            ],
+          ),
         ),
       ),
     );

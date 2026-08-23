@@ -388,53 +388,59 @@ class _AmanogawaScreenState extends ConsumerState<AmanogawaScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-                child: Text(
-                  n.note.title.isEmpty ? 'Untitled' : n.note.title,
-                  style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                  child: Text(
+                    n.note.title.isEmpty ? 'Untitled' : n.note.title,
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: Icon(Icons.link_rounded, color: colors.onSurface),
-                title: Text(
-                  'Connect to…',
-                  style: TextStyle(color: colors.onSurface),
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.link_rounded, color: colors.onSurface),
+                  title: Text(
+                    'Connect to…',
+                    style: TextStyle(color: colors.onSurface),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _connectMode = true;
+                      _connectSourceNoteId = n.note.id;
+                    });
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() {
-                    _connectMode = true;
-                    _connectSourceNoteId = n.note.id;
-                  });
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.link_off_rounded, color: colors.onSurface),
-                title: Text(
-                  'Remove connections',
-                  style: TextStyle(color: colors.onSurface),
+                ListTile(
+                  leading: Icon(
+                    Icons.link_off_rounded,
+                    color: colors.onSurface,
+                  ),
+                  title: Text(
+                    'Remove connections',
+                    style: TextStyle(color: colors.onSurface),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _removeNodeEdges(n.note.id);
+                  },
                 ),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await _removeNodeEdges(n.note.id);
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -495,58 +501,61 @@ class _AmanogawaScreenState extends ConsumerState<AmanogawaScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                child: Text(
-                  'Add note to section',
-                  style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              ...sections.map(
-                (section) => ListTile(
-                  leading: Icon(
-                    Icons.folder_outlined,
-                    color: colors.accent,
-                    size: 22,
-                  ),
-                  title: Text(
-                    section.name,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  child: Text(
+                    'Add note to section',
                     style: TextStyle(
                       color: colors.onSurface,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final noteId = await ref
-                        .read(noteRepositoryProvider)
-                        .create(sectionId: section.id);
-                    if (context.mounted) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => NoteEditorScreen(noteId: noteId),
-                        ),
-                      );
-                    }
-                  },
                 ),
-              ),
-            ],
+                ...sections.map(
+                  (section) => ListTile(
+                    leading: Icon(
+                      Icons.folder_outlined,
+                      color: colors.accent,
+                      size: 22,
+                    ),
+                    title: Text(
+                      section.name,
+                      style: TextStyle(
+                        color: colors.onSurface,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final noteId = await ref
+                          .read(noteRepositoryProvider)
+                          .create(sectionId: section.id);
+                      if (context.mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => NoteEditorScreen(noteId: noteId),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -13,6 +13,7 @@ class HomeScreen extends ConsumerWidget {
 
   void _showNoteTypePicker(BuildContext context, WidgetRef ref) {
     final colors = WasurenagusaTheme.of(context).colors;
+    final outerContext = context;
 
     showModalBottomSheet(
       context: context,
@@ -48,7 +49,21 @@ class HomeScreen extends ConsumerWidget {
                     colors: colors,
                     onTap: () async {
                       Navigator.pop(context);
-                      await _createAndOpen(context, ref, BlockType.text);
+                      await _createAndOpen(outerContext, ref, BlockType.text);
+                    },
+                  ),
+                  _NoteTypeOption(
+                    icon: Icons.title_rounded,
+                    label: 'Heading',
+                    description: 'Title, subtitle, section header',
+                    colors: colors,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _createAndOpen(
+                        outerContext,
+                        ref,
+                        BlockType.heading,
+                      );
                     },
                   ),
                   _NoteTypeOption(
@@ -58,7 +73,11 @@ class HomeScreen extends ConsumerWidget {
                     colors: colors,
                     onTap: () async {
                       Navigator.pop(context);
-                      await _createAndOpen(context, ref, BlockType.checklist);
+                      await _createAndOpen(
+                        outerContext,
+                        ref,
+                        BlockType.checklist,
+                      );
                     },
                   ),
                   _NoteTypeOption(
@@ -69,7 +88,7 @@ class HomeScreen extends ConsumerWidget {
                     onTap: () async {
                       Navigator.pop(context);
                       await _createAndOpen(
-                        context,
+                        outerContext,
                         ref,
                         BlockType.numberedList,
                       );
@@ -82,7 +101,55 @@ class HomeScreen extends ConsumerWidget {
                     colors: colors,
                     onTap: () async {
                       Navigator.pop(context);
-                      await _createAndOpen(context, ref, BlockType.bulletList);
+                      await _createAndOpen(
+                        outerContext,
+                        ref,
+                        BlockType.bulletList,
+                      );
+                    },
+                  ),
+                  _NoteTypeOption(
+                    icon: Icons.format_quote_rounded,
+                    label: 'Quote',
+                    description: 'Quote or highlighted passage',
+                    colors: colors,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _createAndOpen(outerContext, ref, BlockType.quote);
+                    },
+                  ),
+                  _NoteTypeOption(
+                    icon: Icons.code_rounded,
+                    label: 'Code',
+                    description: 'Monospaced code snippet',
+                    colors: colors,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _createAndOpen(outerContext, ref, BlockType.code);
+                    },
+                  ),
+                  _NoteTypeOption(
+                    icon: Icons.draw_outlined,
+                    label: 'Drawing',
+                    description: 'Freehand sketch or illustration',
+                    colors: colors,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _createAndOpen(
+                        outerContext,
+                        ref,
+                        BlockType.drawing,
+                      );
+                    },
+                  ),
+                  _NoteTypeOption(
+                    icon: Icons.table_chart_outlined,
+                    label: 'Table',
+                    description: 'Grid with rows and columns',
+                    colors: colors,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showTableSizePicker(outerContext, ref);
                     },
                   ),
                 ],
@@ -94,20 +161,150 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
+  void _showTableSizePicker(BuildContext context, WidgetRef ref) {
+    final colors = WasurenagusaTheme.of(context).colors;
+    int selectedRow = 0;
+    int selectedCol = 0;
+    const maxR = 6;
+    const maxC = 9;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Table size',
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${selectedRow + 1} rows × ${selectedCol + 1} columns  •  row 1 is the header',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (int r = 0; r < maxR; r++)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (int c = 0; c < maxC; c++)
+                              GestureDetector(
+                                onTap: () => setSheet(() {
+                                  selectedRow = r;
+                                  selectedCol = c;
+                                }),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 80),
+                                  width: 30,
+                                  height: 30,
+                                  margin: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: r <= selectedRow && c <= selectedCol
+                                        ? colors.accent.withValues(alpha: 0.2)
+                                        : colors.surfaceVariant,
+                                    borderRadius: BorderRadius.circular(5),
+                                    border: Border.all(
+                                      color:
+                                          r <= selectedRow && c <= selectedCol
+                                          ? colors.accent
+                                          : colors.divider,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colors.accent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () async {
+                        final navigator = Navigator.of(ctx);
+                        final rows = selectedRow + 1;
+                        final cols = selectedCol + 1;
+                        Navigator.pop(ctx);
+                        final noteId = await ref
+                            .read(noteRepositoryProvider)
+                            .create();
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          navigator.push(
+                            MaterialPageRoute(
+                              builder: (_) => NoteEditorScreen(
+                                noteId: noteId,
+                                initialBlockType: BlockType.table,
+                                initialTableData: TableData.empty(
+                                  rows: rows,
+                                  cols: cols,
+                                ),
+                              ),
+                            ),
+                          );
+                        });
+                      },
+                      child: Text(
+                        'Create ${selectedRow + 1} × ${selectedCol + 1} table  (1 header + $selectedRow data rows)',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _createAndOpen(
     BuildContext context,
     WidgetRef ref,
     BlockType initialType,
   ) async {
+    final navigator = Navigator.of(context);
     final noteId = await ref.read(noteRepositoryProvider).create();
-    if (context.mounted) {
-      Navigator.of(context).push(
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      navigator.push(
         MaterialPageRoute(
           builder: (_) =>
               NoteEditorScreen(noteId: noteId, initialBlockType: initialType),
         ),
       );
-    }
+    });
   }
 
   @override
@@ -239,10 +436,10 @@ class HomeScreen extends ConsumerWidget {
 // Section header
 // ─────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
-  final String label;
-  final WasurenagusaColorScheme colors;
-
   const _SectionHeader({required this.label, required this.colors});
+
+  final WasurenagusaColorScheme colors;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -265,17 +462,17 @@ class _SectionHeader extends StatelessWidget {
 // Note card for home screen
 // ─────────────────────────────────────────────
 class _HomeNoteCard extends StatelessWidget {
-  final Note note;
-  final WasurenagusaColorScheme colors;
-  final VoidCallback onTap;
-  final WidgetRef ref;
-
   const _HomeNoteCard({
     required this.note,
     required this.colors,
     required this.onTap,
     required this.ref,
   });
+
+  final WasurenagusaColorScheme colors;
+  final Note note;
+  final VoidCallback onTap;
+  final WidgetRef ref;
 
   Color? _tagColor() =>
       note.colorTag != null ? kColorTags[note.colorTag] : null;
@@ -361,8 +558,9 @@ class _HomeNoteCard extends StatelessWidget {
 // Empty state
 // ─────────────────────────────────────────────
 class _EmptyHome extends StatelessWidget {
-  final WasurenagusaColorScheme colors;
   const _EmptyHome({required this.colors});
+
+  final WasurenagusaColorScheme colors;
 
   @override
   Widget build(BuildContext context) {
@@ -395,12 +593,6 @@ class _EmptyHome extends StatelessWidget {
 // Note type option for FAB picker
 // ─────────────────────────────────────────────
 class _NoteTypeOption extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String description;
-  final WasurenagusaColorScheme colors;
-  final VoidCallback onTap;
-
   const _NoteTypeOption({
     required this.icon,
     required this.label,
@@ -408,6 +600,12 @@ class _NoteTypeOption extends StatelessWidget {
     required this.colors,
     required this.onTap,
   });
+
+  final WasurenagusaColorScheme colors;
+  final String description;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {

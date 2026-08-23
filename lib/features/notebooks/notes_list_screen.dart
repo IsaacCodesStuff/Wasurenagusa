@@ -49,57 +49,62 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                child: Text(
-                  'Sort by',
-                  style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              ...NoteSortOrder.values.map((order) {
-                final selected = order == currentSort;
-                return ListTile(
-                  leading: Icon(
-                    _sortIcon(order),
-                    color: selected ? colors.accent : colors.onSurfaceVariant,
-                    size: 22,
-                  ),
-                  title: Text(
-                    _sortLabel(order),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  child: Text(
+                    'Sort by',
                     style: TextStyle(
-                      color: selected ? colors.accent : colors.onSurface,
-                      fontSize: 15,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      color: colors.onSurface,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  trailing: selected
-                      ? Icon(
-                          Icons.check_rounded,
-                          color: colors.accent,
-                          size: 20,
-                        )
-                      : null,
-                  onTap: () {
-                    _setSortOrder(ref, order);
-                    Navigator.pop(context);
-                  },
-                );
-              }),
-            ],
+                ),
+                ...NoteSortOrder.values.map((order) {
+                  final selected = order == currentSort;
+                  return ListTile(
+                    leading: Icon(
+                      _sortIcon(order),
+                      color: selected ? colors.accent : colors.onSurfaceVariant,
+                      size: 22,
+                    ),
+                    title: Text(
+                      _sortLabel(order),
+                      style: TextStyle(
+                        color: selected ? colors.accent : colors.onSurface,
+                        fontSize: 15,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    trailing: selected
+                        ? Icon(
+                            Icons.check_rounded,
+                            color: colors.accent,
+                            size: 20,
+                          )
+                        : null,
+                    onTap: () {
+                      _setSortOrder(ref, order);
+                      Navigator.pop(context);
+                    },
+                  );
+                }),
+              ],
+            ),
           ),
         ),
       ),

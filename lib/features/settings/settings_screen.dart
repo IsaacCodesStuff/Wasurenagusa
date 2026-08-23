@@ -44,93 +44,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 16),
-                child: Text(
-                  'Editor font size',
-                  style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 16),
+                  child: Text(
+                    'Editor font size',
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: colors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: WasurenagusaFontSize.values.map((size) {
-                    final isFirst = size == WasurenagusaFontSize.values.first;
-                    final isLast = size == WasurenagusaFontSize.values.last;
-                    final isSelected =
-                        ThemeRegistry.instance.selectedFontSize == size;
-                    return Column(
-                      children: [
-                        InkWell(
-                          onTap: () {
-                            ThemeRegistry.instance.selectFontSize(size);
-                            Navigator.pop(context);
-                          },
-                          borderRadius: BorderRadius.vertical(
-                            top: isFirst
-                                ? const Radius.circular(16)
-                                : Radius.zero,
-                            bottom: isLast
-                                ? const Radius.circular(16)
-                                : Radius.zero,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
+                Container(
+                  decoration: BoxDecoration(
+                    color: colors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: WasurenagusaFontSize.values.map((size) {
+                      final isFirst = size == WasurenagusaFontSize.values.first;
+                      final isLast = size == WasurenagusaFontSize.values.last;
+                      final isSelected =
+                          ThemeRegistry.instance.selectedFontSize == size;
+                      return Column(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              ThemeRegistry.instance.selectFontSize(size);
+                              Navigator.pop(context);
+                            },
+                            borderRadius: BorderRadius.vertical(
+                              top: isFirst
+                                  ? const Radius.circular(16)
+                                  : Radius.zero,
+                              bottom: isLast
+                                  ? const Radius.circular(16)
+                                  : Radius.zero,
                             ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    size.label,
-                                    style: TextStyle(
-                                      color: colors.onSurface,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      size.label,
+                                      style: TextStyle(
+                                        color: colors.onSurface,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                if (isSelected)
-                                  Icon(
-                                    Icons.check_rounded,
-                                    color: colors.accent,
-                                    size: 20,
-                                  ),
-                              ],
+                                  if (isSelected)
+                                    Icon(
+                                      Icons.check_rounded,
+                                      color: colors.accent,
+                                      size: 20,
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        if (!isLast)
-                          Divider(
-                            height: 1,
-                            thickness: 1,
-                            indent: 20,
-                            color: colors.divider,
-                          ),
-                      ],
-                    );
-                  }).toList(),
+                          if (!isLast)
+                            Divider(
+                              height: 1,
+                              thickness: 1,
+                              indent: 20,
+                              color: colors.divider,
+                            ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

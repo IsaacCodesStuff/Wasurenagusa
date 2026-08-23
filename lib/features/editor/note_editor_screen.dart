@@ -21,11 +21,13 @@ import '../../core/database/app_database.dart';
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final int noteId;
   final BlockType? initialBlockType;
+  final TableData? initialTableData;
 
   const NoteEditorScreen({
     super.key,
     required this.noteId,
     this.initialBlockType,
+    this.initialTableData,
   });
 
   @override
@@ -69,7 +71,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     await _controller.loadBlocks();
 
     if (widget.initialBlockType != null && _controller.blocks.isEmpty) {
-      await _controller.addBlock(widget.initialBlockType!);
+      await _controller.addBlock(
+        widget.initialBlockType!,
+        initialTableData: widget.initialTableData,
+      );
     }
 
     if (mounted) setState(() => _loading = false);
