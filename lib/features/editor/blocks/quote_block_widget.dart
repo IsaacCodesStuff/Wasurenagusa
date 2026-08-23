@@ -11,6 +11,7 @@ class QuoteBlockWidget extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onFocused;
   final VoidCallback onUnfocused;
+  final void Function(TextSelection)? onSaveSelection;
 
   const QuoteBlockWidget({
     super.key,
@@ -21,6 +22,7 @@ class QuoteBlockWidget extends StatefulWidget {
     required this.onDelete,
     required this.onFocused,
     required this.onUnfocused,
+    required this.onSaveSelection,
   });
 
   @override
@@ -41,6 +43,8 @@ class _QuoteBlockWidgetState extends State<QuoteBlockWidget> {
       if (focused) {
         widget.onFocused();
       } else {
+        // Save selection before focus is lost
+        widget.onSaveSelection?.call(widget.textController.selection);
         widget.onUnfocused();
       }
     });

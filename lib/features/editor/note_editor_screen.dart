@@ -17,6 +17,8 @@ import '../../core/repositories/note_repository.dart';
 import '../../widgets/note_options_sheet.dart';
 import 'package:drift/drift.dart' show Value;
 import '../../core/database/app_database.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final int noteId;
   final BlockType? initialBlockType;
@@ -96,109 +98,113 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   void _showColorTagPicker() {
     final colors = WasurenagusaTheme.of(context).colors;
+    final currentColor = resolveColorTag(_note?.colorTag) ?? colors.accent;
+    Color pickerColor = currentColor;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tag color',
-                style: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // No color option
-                  GestureDetector(
-                    onTap: () async {
-                      Navigator.pop(ctx);
-                      final note = await _noteRepo.getById(widget.noteId);
-                      if (note != null) {
-                        await _noteRepo.update(
-                          note.copyWith(colorTag: const Value(null)),
-                        );
-                        if (mounted) {
-                          setState(
-                            () => _note = note.copyWith(
-                              colorTag: const Value(null),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: colors.onSurfaceVariant,
-                          width: 1.5,
+                  Row(
+                    children: [
+                      Text(
+                        'Tag color',
+                        style: TextStyle(
+                          color: colors.onSurface,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: colors.onSurfaceVariant,
-                        size: 18,
-                      ),
-                    ),
+                      const Spacer(),
+                      if (_note?.colorTag != null)
+                        TextButton.icon(
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            final note = await _noteRepo.getById(widget.noteId);
+                            if (note != null) {
+                              await _noteRepo.update(
+                                note.copyWith(colorTag: const Value(null)),
+                              );
+                              if (mounted) {
+                                setState(
+                                  () => _note = note.copyWith(
+                                    colorTag: const Value(null),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          icon: Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: colors.onSurfaceVariant,
+                          ),
+                          label: Text(
+                            'Remove',
+                            style: TextStyle(color: colors.onSurfaceVariant),
+                          ),
+                        ),
+                    ],
                   ),
-                  ...kColorTags.entries.map((entry) {
-                    final isSelected = _note?.colorTag == entry.key;
-                    return GestureDetector(
-                      onTap: () async {
+                  const SizedBox(height: 16),
+                  HueRingPicker(
+                    pickerColor: pickerColor,
+                    onColorChanged: (color) =>
+                        setSheet(() => pickerColor = color),
+                    enableAlpha: false,
+                    displayThumbColor: true,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: pickerColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () async {
                         Navigator.pop(ctx);
+                        final tag = colorToTag(pickerColor);
                         final note = await _noteRepo.getById(widget.noteId);
                         if (note != null) {
                           await _noteRepo.update(
-                            note.copyWith(colorTag: Value(entry.key)),
+                            note.copyWith(colorTag: Value(tag)),
                           );
                           if (mounted) {
                             setState(
-                              () => _note = note.copyWith(
-                                colorTag: Value(entry.key),
-                              ),
+                              () => _note = note.copyWith(colorTag: Value(tag)),
                             );
                           }
                         }
                       },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: entry.value,
-                          shape: BoxShape.circle,
-                          border: isSelected
-                              ? Border.all(color: colors.onSurface, width: 2.5)
-                              : null,
+                      child: const Text(
+                        'Apply color',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                         ),
-                        child: isSelected
-                            ? Icon(
-                                Icons.check_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              )
-                            : null,
                       ),
-                    );
-                  }),
+                    ),
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -478,7 +484,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           onSubmitted: (_) => _saveTitle(),
         ),
         actions: [
-          // Reorder mode toggle
           IconButton(
             icon: Icon(
               _reorderMode ? Icons.check_rounded : Icons.menu_rounded,
@@ -496,61 +501,45 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: _reorderMode
+          ? null
+          : ListenableBuilder(
+              listenable: _controller,
+              builder: (context, _) => _FormattingToolbar(
+                colors: colors,
+                enabled:
+                    _controller.focusedBlockId != -1 &&
+                    _controller.blocks.any(
+                      (b) =>
+                          b.id == _controller.focusedBlockId ||
+                          -b.id! == _controller.focusedBlockId,
+                    ),
+                onBold: () => _insertFormat('**', '**'),
+                onItalic: () => _insertFormat('*', '*'),
+                onCode: () => _insertFormat('`', '`'),
+                onStrikethrough: () => _insertFormat('~~', '~~'),
+                currentColorTag: _note?.colorTag,
+                onColorTag: _showColorTagPicker,
+              ),
+            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: _reorderMode
           ? null
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 48),
-              child: FloatingActionButton(
-                heroTag: 'fab_editor',
-                onPressed: _showBlockPicker,
-                child: const Icon(Icons.add_rounded),
-              ),
+          : FloatingActionButton(
+              heroTag: 'fab_editor',
+              onPressed: _showBlockPicker,
+              child: const Icon(Icons.add_rounded),
             ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListenableBuilder(
               listenable: _controller,
               builder: (context, _) {
-                return Stack(
-                  children: [
-                    Column(
-                      children: [
-                        Expanded(
-                          child: _controller.blocks.isEmpty
-                              ? _EmptyEditor(colors: colors)
-                              : _reorderMode
-                              ? _buildReorderList(colors)
-                              : _buildNormalList(colors),
-                        ),
-                      ],
-                    ),
-                    if (!_reorderMode)
-                      Positioned(
-                        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: _FormattingToolbar(
-                            colors: colors,
-                            enabled:
-                                _controller.focusedBlockId != -1 &&
-                                _controller.blocks.any(
-                                  (b) =>
-                                      b.id == _controller.focusedBlockId ||
-                                      -b.id! == _controller.focusedBlockId,
-                                ),
-                            onBold: () => _insertFormat('**', '**'),
-                            onItalic: () => _insertFormat('*', '*'),
-                            onCode: () => _insertFormat('`', '`'),
-                            onStrikethrough: () => _insertFormat('~~', '~~'),
-                            currentColorTag: _note?.colorTag, // add
-                            onColorTag: _showColorTagPicker, // add
-                          ),
-                        ),
-                      ),
-                  ],
-                );
+                return _controller.blocks.isEmpty
+                    ? _EmptyEditor(colors: colors)
+                    : _reorderMode
+                    ? _buildReorderList(colors)
+                    : _buildNormalList(colors);
               },
             ),
     );
@@ -562,7 +551,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.translucent,
       child: ListView.builder(
-        padding: const EdgeInsets.only(top: 8, bottom: 120),
+        padding: const EdgeInsets.only(top: 8, bottom: 32),
         itemCount: _controller.blocks.length,
         itemBuilder: (context, i) {
           final block = _controller.blocks[i];
@@ -696,6 +685,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           onDelete: () => _controller.deleteBlock(index),
           onFocused: () => _controller.onBlockFocused(block.id!),
           onUnfocused: () => _controller.onBlockUnfocused(block.id!),
+          onSaveSelection: (sel) => _controller.saveSelection(block.id!, sel),
         );
       case BlockType.heading:
         return HeadingBlockWidget(
@@ -706,6 +696,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           onDelete: () => _controller.deleteBlock(index),
           onFocused: () => _controller.onBlockFocused(block.id!),
           onUnfocused: () => _controller.onBlockUnfocused(block.id!),
+          onSaveSelection: (sel) => _controller.saveSelection(block.id!, sel),
         );
       case BlockType.checklist:
         return ChecklistBlockWidget(
@@ -753,6 +744,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           onDelete: () => _controller.deleteBlock(index),
           onFocused: () => _controller.onBlockFocused(block.id!),
           onUnfocused: () => _controller.onBlockUnfocused(block.id!),
+          onSaveSelection: (sel) => _controller.saveSelection(block.id!, sel),
         );
       case BlockType.code:
         return CodeBlockWidget(
@@ -908,129 +900,113 @@ class _FormattingToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final buttonWidth = (screenWidth < 360) ? 44.0 : 52.0;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: screenWidth - 32),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Container(
-          height: 48,
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.divider, width: 1)),
+      ),
+      padding: EdgeInsets.only(
+        left: 8,
+        right: 8,
+        top: 4,
+        bottom: bottomInset > 0 ? 4 : bottomPadding + 4,
+      ),
+      child: Row(
+        children: [
+          _ToolbarButton(
+            icon: Icons.format_bold_rounded,
+            colors: colors,
+            enabled: enabled,
+            onTap: onBold,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _ToolbarButton(
-                label: 'B',
-                bold: true,
-                colors: colors,
-                enabled: enabled,
-                onTap: onBold,
-                width: buttonWidth,
-              ),
-              _ToolbarButton(
-                label: 'I',
-                italic: true,
-                colors: colors,
-                enabled: enabled,
-                onTap: onItalic,
-                width: buttonWidth,
-              ),
-              _ToolbarButton(
-                label: 'S̶',
-                colors: colors,
-                enabled: enabled,
-                onTap: onStrikethrough,
-                width: buttonWidth,
-              ),
-              _ToolbarButton(
-                label: '</>',
-                mono: true,
-                colors: colors,
-                enabled: enabled,
-                onTap: onCode,
-                width: buttonWidth,
-              ),
-              Container(width: 1, height: 24, color: colors.divider),
-              GestureDetector(
-                onTap: onColorTag,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
+          _ToolbarButton(
+            icon: Icons.format_italic_rounded,
+            colors: colors,
+            enabled: enabled,
+            onTap: onItalic,
+          ),
+          _ToolbarButton(
+            icon: Icons.strikethrough_s_rounded,
+            colors: colors,
+            enabled: enabled,
+            onTap: onStrikethrough,
+          ),
+          _ToolbarButton(
+            icon: Icons.code_rounded,
+            colors: colors,
+            enabled: enabled,
+            onTap: onCode,
+          ),
+          Container(
+            width: 1,
+            height: 24,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            color: colors.divider,
+          ),
+          // Color tag button
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: InkWell(
+              onTap: onColorTag,
+              borderRadius: BorderRadius.circular(24),
+              child: Center(
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color:
+                        resolveColorTag(currentColorTag) ??
+                        colors.onSurfaceVariant.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                    border: Border.all(
                       color:
                           resolveColorTag(currentColorTag) ??
-                          colors.onSurfaceVariant.withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color:
-                            resolveColorTag(currentColorTag) ??
-                            colors.onSurfaceVariant,
-                        width: 1.5,
-                      ),
+                          colors.onSurfaceVariant,
+                      width: 1.5,
                     ),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
 class _ToolbarButton extends StatelessWidget {
-  final String label;
-  final bool bold;
-  final bool italic;
-  final bool mono;
+  final IconData icon;
   final WasurenagusaColorScheme colors;
   final bool enabled;
   final VoidCallback onTap;
-  final double width;
 
   const _ToolbarButton({
-    required this.label,
-    this.bold = false,
-    this.italic = false,
-    this.mono = false,
+    required this.icon,
     required this.colors,
     required this.enabled,
     required this.onTap,
-    this.width = 52,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      child: SizedBox(
-        width: width,
-        height: 48,
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(24),
         child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: enabled ? colors.onSurface : colors.onSurfaceVariant,
-              fontSize: 15,
-              fontWeight: bold ? FontWeight.w800 : FontWeight.w400,
-              fontStyle: italic ? FontStyle.italic : FontStyle.normal,
-              fontFamily: mono ? 'monospace' : null,
-            ),
+          child: Icon(
+            icon,
+            size: 22,
+            color: enabled
+                ? colors.onSurface
+                : colors.onSurfaceVariant.withValues(alpha: 0.4),
           ),
         ),
       ),

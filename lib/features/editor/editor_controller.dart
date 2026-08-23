@@ -9,7 +9,12 @@ class EditorController extends ChangeNotifier {
   final BlockRepository blockRepo;
   final NoteRepository noteRepo;
   final Map<int, TextEditingController> textControllers = {};
+  final Map<int, TextSelection> _savedSelections = {};
   int focusedBlockId = -1;
+
+  void saveSelection(int blockId, TextSelection selection) {
+    _savedSelections[blockId] = selection;
+  }
 
   void onBlockFocused(int blockId) {
     focusedBlockId = blockId;
@@ -31,21 +36,26 @@ class EditorController extends ChangeNotifier {
   }
 
   void insertAtCursor(String prefix, String suffix) {
-    if (focusedBlockId == -1) return;
-    final tc = textControllers[focusedBlockId];
+    // On desktop, focus is lost when toolbar is clicked so focusedBlockId
+    // may be -1. Fall back to the last block that had a saved selection.
+    int targetId = focusedBlockId;
+    if (targetId == -1 && _savedSelections.isNotEmpty) {
+      targetId = _savedSelections.keys.last;
+    }
+    if (targetId == -1) return;
+
+    final tc = textControllers[targetId];
     if (tc == null) return;
 
-    final selection = tc.selection;
-    final text = tc.text;
-
-    if (!selection.isValid) {
-      tc.text = '$text$prefix$suffix';
-      tc.selection = TextSelection.collapsed(
-        offset: tc.text.length - suffix.length,
-      );
-      return;
+    // Use live selection if valid, otherwise fall back to saved selection.
+    TextSelection selection = tc.selection;
+    if (!selection.isValid || selection.start == -1) {
+      selection =
+          _savedSelections[targetId] ??
+          TextSelection.collapsed(offset: tc.text.length);
     }
 
+    final text = tc.text;
     final before = text.substring(0, selection.start);
     final selected = text.substring(selection.start, selection.end);
     final after = text.substring(selection.end);
@@ -58,7 +68,7 @@ class EditorController extends ChangeNotifier {
       ),
     );
 
-    final blockIndex = _blocks.indexWhere((b) => b.id == focusedBlockId);
+    final blockIndex = _blocks.indexWhere((b) => b.id == targetId);
     if (blockIndex != -1) {
       updateBlockText(blockIndex, tc.text);
     }
