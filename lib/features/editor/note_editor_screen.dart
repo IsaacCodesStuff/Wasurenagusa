@@ -321,120 +321,123 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 16),
-                child: Text(
-                  'Add block',
-                  style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 16),
+                  child: Text(
+                    'Add block',
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.1,
-                children: [
-                  _BlockPickerItem(
-                    icon: Icons.text_fields_rounded,
-                    label: 'Text',
-                    colors: colors,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _controller.addBlock(BlockType.text);
-                    },
-                  ),
-                  _BlockPickerItem(
-                    icon: Icons.title_rounded,
-                    label: 'Heading',
-                    colors: colors,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _controller.addBlock(BlockType.heading);
-                    },
-                  ),
-                  _BlockPickerItem(
-                    icon: Icons.check_box_outlined,
-                    label: 'Checklist',
-                    colors: colors,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _controller.addBlock(BlockType.checklist);
-                    },
-                  ),
-                  _BlockPickerItem(
-                    icon: Icons.format_list_numbered_rounded,
-                    label: 'Numbered',
-                    colors: colors,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _controller.addBlock(BlockType.numberedList);
-                    },
-                  ),
-                  _BlockPickerItem(
-                    icon: Icons.format_list_bulleted_rounded,
-                    label: 'Bullet',
-                    colors: colors,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _controller.addBlock(BlockType.bulletList);
-                    },
-                  ),
-                  _BlockPickerItem(
-                    icon: Icons.format_quote_rounded,
-                    label: 'Quote',
-                    colors: colors,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _controller.addBlock(BlockType.quote);
-                    },
-                  ),
-                  _BlockPickerItem(
-                    icon: Icons.code_rounded,
-                    label: 'Code',
-                    colors: colors,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _controller.addBlock(BlockType.code);
-                    },
-                  ),
-                  _BlockPickerItem(
-                    icon: Icons.draw_outlined,
-                    label: 'Drawing',
-                    colors: colors,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _controller.addBlock(BlockType.drawing);
-                    },
-                  ),
-                  _BlockPickerItem(
-                    icon: Icons.table_chart_outlined,
-                    label: 'Table',
-                    colors: colors,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showTableSizePicker();
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.1,
+                  children: [
+                    _BlockPickerItem(
+                      icon: Icons.text_fields_rounded,
+                      label: 'Text',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _controller.addBlock(BlockType.text);
+                      },
+                    ),
+                    _BlockPickerItem(
+                      icon: Icons.title_rounded,
+                      label: 'Heading',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _controller.addBlock(BlockType.heading);
+                      },
+                    ),
+                    _BlockPickerItem(
+                      icon: Icons.check_box_outlined,
+                      label: 'Checklist',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _controller.addBlock(BlockType.checklist);
+                      },
+                    ),
+                    _BlockPickerItem(
+                      icon: Icons.format_list_numbered_rounded,
+                      label: 'Numbered',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _controller.addBlock(BlockType.numberedList);
+                      },
+                    ),
+                    _BlockPickerItem(
+                      icon: Icons.format_list_bulleted_rounded,
+                      label: 'Bullet',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _controller.addBlock(BlockType.bulletList);
+                      },
+                    ),
+                    _BlockPickerItem(
+                      icon: Icons.format_quote_rounded,
+                      label: 'Quote',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _controller.addBlock(BlockType.quote);
+                      },
+                    ),
+                    _BlockPickerItem(
+                      icon: Icons.code_rounded,
+                      label: 'Code',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _controller.addBlock(BlockType.code);
+                      },
+                    ),
+                    _BlockPickerItem(
+                      icon: Icons.draw_outlined,
+                      label: 'Drawing',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _controller.addBlock(BlockType.drawing);
+                      },
+                    ),
+                    _BlockPickerItem(
+                      icon: Icons.table_chart_outlined,
+                      label: 'Table',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showTableSizePicker();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         ),
       ),
@@ -901,76 +904,85 @@ class _FormattingToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IntrinsicWidth(
-      child: Container(
-        height: 48,
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _ToolbarButton(
-              label: 'B',
-              bold: true,
-              colors: colors,
-              enabled: enabled,
-              onTap: onBold,
-            ),
-            _ToolbarButton(
-              label: 'I',
-              italic: true,
-              colors: colors,
-              enabled: enabled,
-              onTap: onItalic,
-            ),
-            _ToolbarButton(
-              label: 'S̶',
-              colors: colors,
-              enabled: enabled,
-              onTap: onStrikethrough,
-            ),
-            _ToolbarButton(
-              label: '</>',
-              mono: true,
-              colors: colors,
-              enabled: enabled,
-              onTap: onCode,
-            ),
-            // Divider
-            Container(width: 1, height: 24, color: colors.divider),
-            // Color tag button
-            GestureDetector(
-              onTap: onColorTag,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: currentColorTag != null
-                        ? kColorTags[currentColorTag]
-                        : colors.onSurfaceVariant.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
-                    border: Border.all(
+    final screenWidth = MediaQuery.of(context).size.width;
+    final buttonWidth = (screenWidth < 360) ? 44.0 : 52.0;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: screenWidth - 32),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ToolbarButton(
+                label: 'B',
+                bold: true,
+                colors: colors,
+                enabled: enabled,
+                onTap: onBold,
+                width: buttonWidth,
+              ),
+              _ToolbarButton(
+                label: 'I',
+                italic: true,
+                colors: colors,
+                enabled: enabled,
+                onTap: onItalic,
+                width: buttonWidth,
+              ),
+              _ToolbarButton(
+                label: 'S̶',
+                colors: colors,
+                enabled: enabled,
+                onTap: onStrikethrough,
+                width: buttonWidth,
+              ),
+              _ToolbarButton(
+                label: '</>',
+                mono: true,
+                colors: colors,
+                enabled: enabled,
+                onTap: onCode,
+                width: buttonWidth,
+              ),
+              Container(width: 1, height: 24, color: colors.divider),
+              GestureDetector(
+                onTap: onColorTag,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
                       color: currentColorTag != null
-                          ? kColorTags[currentColorTag]!
-                          : colors.onSurfaceVariant,
-                      width: 1.5,
+                          ? kColorTags[currentColorTag]
+                          : colors.onSurfaceVariant.withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: currentColorTag != null
+                            ? kColorTags[currentColorTag]!
+                            : colors.onSurfaceVariant,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -985,6 +997,7 @@ class _ToolbarButton extends StatelessWidget {
   final WasurenagusaColorScheme colors;
   final bool enabled;
   final VoidCallback onTap;
+  final double width;
 
   const _ToolbarButton({
     required this.label,
@@ -994,6 +1007,7 @@ class _ToolbarButton extends StatelessWidget {
     required this.colors,
     required this.enabled,
     required this.onTap,
+    this.width = 52,
   });
 
   @override
@@ -1001,7 +1015,7 @@ class _ToolbarButton extends StatelessWidget {
     return InkWell(
       onTap: enabled ? onTap : null,
       child: SizedBox(
-        width: 52,
+        width: width,
         height: 48,
         child: Center(
           child: Text(

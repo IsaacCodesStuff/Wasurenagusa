@@ -17,6 +17,7 @@ class HomeScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -24,62 +25,68 @@ class HomeScreen extends ConsumerWidget {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 8, bottom: 16),
-                  child: Text(
-                    'New note',
-                    style: TextStyle(
-                      color: colors.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, bottom: 16),
+                    child: Text(
+                      'New note',
+                      style: TextStyle(
+                        color: colors.onSurface,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-                _NoteTypeOption(
-                  icon: Icons.text_fields_rounded,
-                  label: 'Text note',
-                  description: 'Plain writing, headings, paragraphs',
-                  colors: colors,
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _createAndOpen(context, ref, BlockType.text);
-                  },
-                ),
-                _NoteTypeOption(
-                  icon: Icons.check_box_outlined,
-                  label: 'Checklist',
-                  description: 'Tasks, to-dos, shopping lists',
-                  colors: colors,
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _createAndOpen(context, ref, BlockType.checklist);
-                  },
-                ),
-                _NoteTypeOption(
-                  icon: Icons.format_list_numbered_rounded,
-                  label: 'Numbered list',
-                  description: 'Ordered steps or ranked items',
-                  colors: colors,
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _createAndOpen(context, ref, BlockType.numberedList);
-                  },
-                ),
-                _NoteTypeOption(
-                  icon: Icons.format_list_bulleted_rounded,
-                  label: 'Bullet list',
-                  description: 'Unordered items',
-                  colors: colors,
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _createAndOpen(context, ref, BlockType.bulletList);
-                  },
-                ),
-              ],
+                  _NoteTypeOption(
+                    icon: Icons.text_fields_rounded,
+                    label: 'Text note',
+                    description: 'Plain writing, headings, paragraphs',
+                    colors: colors,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _createAndOpen(context, ref, BlockType.text);
+                    },
+                  ),
+                  _NoteTypeOption(
+                    icon: Icons.check_box_outlined,
+                    label: 'Checklist',
+                    description: 'Tasks, to-dos, shopping lists',
+                    colors: colors,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _createAndOpen(context, ref, BlockType.checklist);
+                    },
+                  ),
+                  _NoteTypeOption(
+                    icon: Icons.format_list_numbered_rounded,
+                    label: 'Numbered list',
+                    description: 'Ordered steps or ranked items',
+                    colors: colors,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _createAndOpen(
+                        context,
+                        ref,
+                        BlockType.numberedList,
+                      );
+                    },
+                  ),
+                  _NoteTypeOption(
+                    icon: Icons.format_list_bulleted_rounded,
+                    label: 'Bullet list',
+                    description: 'Unordered items',
+                    colors: colors,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _createAndOpen(context, ref, BlockType.bulletList);
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         );
