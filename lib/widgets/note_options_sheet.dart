@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../core/database/app_database.dart';
 import '../core/providers/repository_providers.dart';
 import '../theme/wasurenagusa_theme.dart';
 import 'package:drift/drift.dart' show Value;
 
-// Color tag definitions — single source of truth
+// Legacy named color tags — kept for backwards compatibility with existing notes
 const Map<String, Color> kColorTags = {
   'red': Color(0xFFCF6679),
   'orange': Color(0xFFD4845A),
@@ -15,6 +16,25 @@ const Map<String, Color> kColorTags = {
   'purple': Color(0xFF9B5AD4),
   'teal': Color(0xFF5AC4C4),
 };
+
+// Resolves a colorTag string to a Color.
+// Handles both legacy named keys and new hex strings.
+Color? resolveColorTag(String? tag) {
+  if (tag == null) return null;
+  if (kColorTags.containsKey(tag)) return kColorTags[tag];
+  try {
+    final hex = tag.replaceFirst('#', '');
+    return Color(int.parse('FF$hex', radix: 16));
+  } catch (_) {
+    return null;
+  }
+}
+
+// Converts a Color to a hex string for storage.
+String colorToTag(Color color) {
+  final hex = color.toARGB32().toRadixString(16).padLeft(8, '0');
+  return '#${hex.substring(2)}'; // strip alpha, keep RGB
+}
 
 Future<void> showNoteOptions(
   BuildContext context,
@@ -67,7 +87,6 @@ class _NoteOptionsSheetState extends ConsumerState<_NoteOptionsSheet> {
 
   // ── Rename ──────────────────────────────────
   void _showRenameDialog() {
-    // Capture ref before popping since the sheet will unmount
     final noteRepo = ref.read(noteRepositoryProvider);
     Navigator.pop(context);
 
@@ -135,96 +154,104 @@ class _NoteOptionsSheetState extends ConsumerState<_NoteOptionsSheet> {
   // ── Color tag ───────────────────────────────
   void _showColorTagPicker() {
     final colors = widget.colors;
+    final currentColor = resolveColorTag(_note.colorTag) ?? colors.accent;
+    Color pickerColor = currentColor;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Color tag',
-                style: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // None option
-                  GestureDetector(
-                    onTap: () async {
-                      await ref
-                          .read(noteRepositoryProvider)
-                          .update(_note.copyWith(colorTag: const Value(null)));
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: colors.surfaceVariant,
-                        shape: BoxShape.circle,
-                        border: _note.colorTag == null
-                            ? Border.all(color: colors.accent, width: 2.5)
-                            : null,
+                  Row(
+                    children: [
+                      Text(
+                        'Color tag',
+                        style: TextStyle(
+                          color: colors.onSurface,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.block_rounded,
-                        color: colors.onSurfaceVariant,
-                        size: 20,
+                      const Spacer(),
+                      // Remove color button
+                      if (_note.colorTag != null)
+                        TextButton.icon(
+                          onPressed: () async {
+                            await ref
+                                .read(noteRepositoryProvider)
+                                .update(
+                                  _note.copyWith(colorTag: const Value(null)),
+                                );
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx);
+                              Navigator.pop(ctx);
+                            }
+                          },
+                          icon: Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: colors.onSurfaceVariant,
+                          ),
+                          label: Text(
+                            'Remove',
+                            style: TextStyle(color: colors.onSurfaceVariant),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  HueRingPicker(
+                    pickerColor: pickerColor,
+                    onColorChanged: (color) =>
+                        setSheet(() => pickerColor = color),
+                    enableAlpha: false,
+                    displayThumbColor: true,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: pickerColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () async {
+                        final tag = colorToTag(pickerColor);
+                        await ref
+                            .read(noteRepositoryProvider)
+                            .update(_note.copyWith(colorTag: Value(tag)));
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          Navigator.pop(ctx);
+                        }
+                      },
+                      child: const Text(
+                        'Apply color',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                  // Color options
-                  ...kColorTags.entries.map((entry) {
-                    final isSelected = _note.colorTag == entry.key;
-                    return GestureDetector(
-                      onTap: () async {
-                        await ref
-                            .read(noteRepositoryProvider)
-                            .update(_note.copyWith(colorTag: Value(entry.key)));
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: entry.value,
-                          shape: BoxShape.circle,
-                          border: isSelected
-                              ? Border.all(color: colors.onSurface, width: 2.5)
-                              : null,
-                        ),
-                        child: isSelected
-                            ? const Icon(
-                                Icons.check_rounded,
-                                color: Colors.white,
-                                size: 20,
-                              )
-                            : null,
-                      ),
-                    );
-                  }),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -353,6 +380,7 @@ class _NoteOptionsSheetState extends ConsumerState<_NoteOptionsSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = widget.colors;
+    final tagColor = resolveColorTag(_note.colorTag);
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
@@ -360,18 +388,17 @@ class _NoteOptionsSheetState extends ConsumerState<_NoteOptionsSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Note title header
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                 child: Row(
                   children: [
-                    if (_note.colorTag != null)
+                    if (tagColor != null)
                       Container(
                         width: 12,
                         height: 12,
                         margin: const EdgeInsets.only(right: 10),
                         decoration: BoxDecoration(
-                          color: kColorTags[_note.colorTag],
+                          color: tagColor,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -410,12 +437,12 @@ class _NoteOptionsSheetState extends ConsumerState<_NoteOptionsSheet> {
                 icon: Icons.circle_outlined,
                 label: 'Color tag',
                 colors: colors,
-                trailing: _note.colorTag != null
+                trailing: tagColor != null
                     ? Container(
                         width: 16,
                         height: 16,
                         decoration: BoxDecoration(
-                          color: kColorTags[_note.colorTag],
+                          color: tagColor,
                           shape: BoxShape.circle,
                         ),
                       )

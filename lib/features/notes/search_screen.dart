@@ -197,8 +197,7 @@ class _SearchResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tagColor = note.colorTag != null ? kColorTags[note.colorTag] : null;
-
+    final tagColor = resolveColorTag(note.colorTag);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Material(

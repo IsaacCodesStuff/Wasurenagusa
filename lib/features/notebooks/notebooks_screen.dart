@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import '../../core/database/app_database.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../theme/wasurenagusa_theme.dart';
@@ -10,26 +11,8 @@ class NotebooksScreen extends ConsumerWidget {
 
   void _showCreateDialog(BuildContext context, WidgetRef ref) {
     final colors = WasurenagusaTheme.of(context).colors;
-    final controller = TextEditingController();
+    final nameController = TextEditingController();
     String selectedEmoji = '📓';
-
-    final emojis = [
-      '📓',
-      '📘',
-      '📗',
-      '📙',
-      '📕',
-      '📒',
-      '🗒️',
-      '🌸',
-      '🐧',
-      '🎵',
-      '💡',
-      '⚙️',
-      '🇯🇵',
-      '🎮',
-      '🏫',
-    ];
 
     showDialog(
       context: context,
@@ -51,40 +34,63 @@ class NotebooksScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Emoji picker
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: emojis.map((emoji) {
-                  final selected = emoji == selectedEmoji;
-                  return GestureDetector(
-                    onTap: () => setState(() => selectedEmoji = emoji),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? colors.accent.withValues(alpha: 0.2)
-                            : colors.surfaceVariant,
-                        borderRadius: BorderRadius.circular(10),
-                        border: selected
-                            ? Border.all(color: colors.accent, width: 1.5)
-                            : null,
+              // Emoji preview + picker button
+              Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: colors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: colors.accent, width: 1.5),
+                    ),
+                    child: Center(
+                      child: Text(
+                        selectedEmoji,
+                        style: const TextStyle(fontSize: 28),
                       ),
-                      child: Center(
-                        child: Text(
-                          emoji,
-                          style: const TextStyle(fontSize: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        final picked = await _showEmojiPicker(context, colors);
+                        if (picked != null) {
+                          setState(() => selectedEmoji = picked);
+                        }
+                      },
+                      icon: Icon(
+                        Icons.emoji_emotions_outlined,
+                        color: colors.accent,
+                        size: 18,
+                      ),
+                      label: Text(
+                        'Choose emoji',
+                        style: TextStyle(
+                          color: colors.accent,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        backgroundColor: colors.accent.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
                         ),
                       ),
                     ),
-                  );
-                }).toList(),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               // Name field
               TextField(
-                controller: controller,
+                controller: nameController,
                 autofocus: true,
                 style: TextStyle(color: colors.onSurface),
                 decoration: InputDecoration(
@@ -114,7 +120,7 @@ class NotebooksScreen extends ConsumerWidget {
             ),
             TextButton(
               onPressed: () async {
-                final name = controller.text.trim();
+                final name = nameController.text.trim();
                 if (name.isEmpty) return;
                 await ref
                     .read(notebookRepositoryProvider)
@@ -133,6 +139,82 @@ class NotebooksScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<String?> _showEmojiPicker(
+    BuildContext context,
+    WasurenagusaColorScheme colors,
+  ) async {
+    String? picked;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.of(ctx).size.height * 0.5,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Row(
+                children: [
+                  Text(
+                    'Choose emoji',
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: colors.divider),
+            Expanded(
+              child: EmojiPicker(
+                onEmojiSelected: (category, emoji) {
+                  picked = emoji.emoji;
+                  Navigator.pop(ctx);
+                },
+                config: Config(
+                  emojiViewConfig: EmojiViewConfig(
+                    backgroundColor: colors.surface,
+                    emojiSizeMax: 28,
+                    columns: 9,
+                  ),
+                  categoryViewConfig: CategoryViewConfig(
+                    backgroundColor: colors.surface,
+                    iconColor: colors.onSurfaceVariant,
+                    iconColorSelected: colors.accent,
+                    indicatorColor: colors.accent,
+                  ),
+                  searchViewConfig: SearchViewConfig(
+                    backgroundColor: colors.surface,
+                    buttonIconColor: colors.onSurfaceVariant,
+                    hintText: 'Search emoji...',
+                  ),
+                  bottomActionBarConfig: const BottomActionBarConfig(
+                    enabled: false,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    return picked;
   }
 
   void _showNotebookOptions(

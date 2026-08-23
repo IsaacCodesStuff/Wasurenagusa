@@ -17,7 +17,6 @@ import '../../core/repositories/note_repository.dart';
 import '../../widgets/note_options_sheet.dart';
 import 'package:drift/drift.dart' show Value;
 import '../../core/database/app_database.dart';
-
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final int noteId;
   final BlockType? initialBlockType;
@@ -972,14 +971,14 @@ class _FormattingToolbar extends StatelessWidget {
                     width: 20,
                     height: 20,
                     decoration: BoxDecoration(
-                      color: currentColorTag != null
-                          ? kColorTags[currentColorTag]
-                          : colors.onSurfaceVariant.withValues(alpha: 0.3),
+                      color:
+                          resolveColorTag(currentColorTag) ??
+                          colors.onSurfaceVariant.withValues(alpha: 0.3),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: currentColorTag != null
-                            ? kColorTags[currentColorTag]!
-                            : colors.onSurfaceVariant,
+                        color:
+                            resolveColorTag(currentColorTag) ??
+                            colors.onSurfaceVariant,
                         width: 1.5,
                       ),
                     ),

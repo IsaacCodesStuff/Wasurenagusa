@@ -225,9 +225,7 @@ class _NoteCard extends StatelessWidget {
     required this.ref,
   });
 
-  Color? _tagColor() =>
-      note.colorTag != null ? kColorTags[note.colorTag] : null;
-
+  Color? _tagColor() => resolveColorTag(note.colorTag);
   @override
   Widget build(BuildContext context) {
     final tagColor = _tagColor();

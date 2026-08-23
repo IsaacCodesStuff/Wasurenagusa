@@ -2,7 +2,7 @@ name: wasurenagusa
 description: ""
 publish_to: 'none'
 
-version: 0.4.0+1
+version: 0.5.0+1
 
 environment:
   sdk: ^3.12.2
@@ -20,6 +20,8 @@ dependencies:
   shared_preferences: ^2.3.0
   cupertino_icons: ^1.0.8
   package_info_plus: ^8.0.0
+  emoji_picker_flutter: ^4.3.0
+  flutter_colorpicker: ^1.1.0
 
 dev_dependencies:
   flutter_test:

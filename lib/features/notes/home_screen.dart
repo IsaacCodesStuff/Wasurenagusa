@@ -474,8 +474,7 @@ class _HomeNoteCard extends StatelessWidget {
   final VoidCallback onTap;
   final WidgetRef ref;
 
-  Color? _tagColor() =>
-      note.colorTag != null ? kColorTags[note.colorTag] : null;
+  Color? _tagColor() => resolveColorTag(note.colorTag);
 
   String _formatDate(int timestamp) {
     final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
