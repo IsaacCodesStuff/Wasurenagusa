@@ -5,6 +5,7 @@ import '../../core/providers/repository_providers.dart';
 import '../../theme/wasurenagusa_theme.dart';
 import '../../widgets/note_options_sheet.dart';
 import '../editor/note_editor_screen.dart';
+import '../../app_shell.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -47,6 +48,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            ref.read(shellIndexProvider.notifier).setIndex(0);
+          },
+        ),
         title: TextField(
           controller: _controller,
           autofocus: false,

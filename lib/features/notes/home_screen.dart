@@ -6,6 +6,7 @@ import '../../theme/wasurenagusa_theme.dart';
 import '../editor/note_editor_screen.dart';
 import '../../core/models/note_block_model.dart';
 import '../../widgets/note_options_sheet.dart';
+import '../../app_shell.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -110,7 +111,45 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(title: const Text('Wasurenagusa')),
+      appBar: AppBar(
+        title: const Text('Wasurenagusa'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: GestureDetector(
+              onTap: () {
+                ref.read(shellIndexProvider.notifier).setIndex(2);
+              },
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: colors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 12),
+                    Icon(
+                      Icons.search_rounded,
+                      color: colors.onSurfaceVariant,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Search notes...',
+                      style: TextStyle(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_home',
         onPressed: () => _showNoteTypePicker(context, ref),
