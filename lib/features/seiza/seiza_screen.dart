@@ -8,6 +8,7 @@ import '../editor/note_editor_screen.dart';
 import 'dart:math' show cos, sin;
 import '../../widgets/note_options_sheet.dart';
 import '../../main.dart' show routeObserver;
+import '../../widgets/section_picker_dialog.dart';
 
 // ─────────────────────────────────────────────
 // Providers
@@ -463,109 +464,19 @@ class _SeizaScreenState extends ConsumerState<SeizaScreen> with RouteAware {
   }
 
   Future<void> _showCreateNoteDialog(BuildContext context) async {
-    final colors = WasurenagusaTheme.of(context).colors;
-
-    // Fetch sections for this notebook
-    final sections = await ref
-        .read(sectionRepositoryProvider)
-        .getSectionsByNotebook(widget.notebook.id);
-
+    final section = await showSectionPicker(context, ref);
+    if (section == null) return;
     if (!context.mounted) return;
 
-    if (sections.isEmpty) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: colors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            'No sections yet',
-            style: TextStyle(
-              color: colors.onSurface,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          content: Text(
-            'Create a section in this notebook first before adding notes.',
-            style: TextStyle(color: colors.onSurfaceVariant),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('OK', style: TextStyle(color: colors.accent)),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
+    final noteId = await ref
+        .read(noteRepositoryProvider)
+        .create(sectionId: section.id);
 
-    // Show section picker
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: colors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                  child: Text(
-                    'Add note to section',
-                    style: TextStyle(
-                      color: colors.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                ...sections.map(
-                  (section) => ListTile(
-                    leading: Icon(
-                      Icons.folder_outlined,
-                      color: colors.accent,
-                      size: 22,
-                    ),
-                    title: Text(
-                      section.name,
-                      style: TextStyle(
-                        color: colors.onSurface,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    onTap: () async {
-                      Navigator.pop(ctx);
-                      final noteId = await ref
-                          .read(noteRepositoryProvider)
-                          .create(sectionId: section.id);
-                      if (context.mounted) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => NoteEditorScreen(noteId: noteId),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    if (context.mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => NoteEditorScreen(noteId: noteId)),
+      );
+    }
   }
 }
 

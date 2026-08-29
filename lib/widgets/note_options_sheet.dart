@@ -5,6 +5,7 @@ import '../core/database/app_database.dart';
 import '../core/providers/repository_providers.dart';
 import '../theme/wasurenagusa_theme.dart';
 import 'package:drift/drift.dart' show Value;
+import 'section_picker_dialog.dart';
 
 // Legacy named color tags — kept for backwards compatibility with existing notes
 const Map<String, Color> kColorTags = {
@@ -259,61 +260,16 @@ class _NoteOptionsSheetState extends ConsumerState<_NoteOptionsSheet> {
   }
 
   // ── Move to section ─────────────────────────
-  void _showMoveToSection() {
-    final colors = widget.colors;
-    final notebooksAsync = ref.read(notebooksProvider);
+  void _showMoveToSection() async {
+    final section = await showSectionPicker(context, ref);
+    if (section == null) return;
+    if (!mounted) return;
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: colors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.5,
-        maxChildSize: 0.85,
-        builder: (context, scrollController) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-              child: Text(
-                'Move to section',
-                style: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            Expanded(
-              child: notebooksAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
-                data: (notebooks) => ListView.builder(
-                  controller: scrollController,
-                  itemCount: notebooks.length,
-                  itemBuilder: (context, i) {
-                    final notebook = notebooks[i];
-                    return _NotebookExpansionTile(
-                      notebook: notebook,
-                      colors: colors,
-                      note: _note,
-                      ref: ref,
-                      onMoved: () {
-                        Navigator.pop(context);
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    await ref
+        .read(noteRepositoryProvider)
+        .update(_note.copyWith(sectionId: Value(section.id)));
+
+    if (mounted) Navigator.pop(context);
   }
 
   // ── Duplicate ───────────────────────────────
