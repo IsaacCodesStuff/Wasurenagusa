@@ -97,6 +97,12 @@ class EditorController extends ChangeNotifier {
 
     for (final dbBlock in dbBlocks) {
       final type = BlockType.fromDb(dbBlock.type);
+
+      // Silently skip legacy divider blocks — deprecated since 0.3.0,
+      // removed from UI since 0.5.0. The DB row is left untouched until
+      // the note is next saved, at which point it simply won't be written back.
+      if (type == BlockType.divider) continue;
+
       List<BlockItemModel> items = [];
 
       if (type == BlockType.checklist ||
