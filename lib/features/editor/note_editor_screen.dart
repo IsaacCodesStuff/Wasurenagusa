@@ -8,7 +8,6 @@ import 'blocks/text_block_widget.dart';
 import 'blocks/heading_block_widget.dart';
 import 'blocks/checklist_block_widget.dart';
 import 'blocks/list_block_widget.dart';
-import 'blocks/divider_block_widget.dart';
 import 'blocks/quote_block_widget.dart';
 import 'blocks/code_block_widget.dart';
 import 'blocks/drawing_block_widget.dart';
@@ -39,7 +38,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   late EditorController _controller;
   final _titleController = TextEditingController();
   bool _loading = true;
-  bool _reorderMode = false;
+  bool _manageMode = false;
+  bool _reorderEnabled = false;
+  bool _deleteEnabled = false;
+  final Set<int> _selectedBlockIds = {};
   late NoteRepository _noteRepo;
   final Map<int, GlobalKey> _blockKeys = {};
   int? _draggingIndex;
@@ -486,13 +488,16 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              _reorderMode ? Icons.check_rounded : Icons.menu_rounded,
-              color: _reorderMode ? colors.accent : colors.onSurface,
+              _manageMode ? Icons.check_rounded : Icons.menu_rounded,
+              color: _manageMode ? colors.accent : colors.onSurface,
             ),
-            tooltip: _reorderMode ? 'Done reordering' : 'Reorder blocks',
+            tooltip: _manageMode ? 'Done' : 'Manage blocks',
             onPressed: () {
               setState(() {
-                _reorderMode = !_reorderMode;
+                _manageMode = !_manageMode;
+                _reorderEnabled = false;
+                _deleteEnabled = false;
+                _selectedBlockIds.clear();
                 _blockKeys.clear();
                 _draggingIndex = null;
                 _targetIndex = null;
@@ -501,8 +506,24 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _reorderMode
-          ? null
+      bottomNavigationBar: _manageMode
+          ? _ManageToolbar(
+              colors: colors,
+              deleteEnabled: _deleteEnabled,
+              reorderEnabled: _reorderEnabled,
+              selectedCount: _selectedBlockIds.length,
+              onDeleteMode: () => setState(() {
+                _deleteEnabled = true;
+                _reorderEnabled = false;
+                _selectedBlockIds.clear();
+              }),
+              onReorderMode: () => setState(() {
+                _reorderEnabled = true;
+                _deleteEnabled = false;
+                _selectedBlockIds.clear();
+              }),
+              onConfirmDelete: _confirmDeleteSelected,
+            )
           : ListenableBuilder(
               listenable: _controller,
               builder: (context, _) => _FormattingToolbar(
@@ -523,7 +544,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               ),
             ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: _reorderMode
+      floatingActionButton: _manageMode
           ? null
           : FloatingActionButton(
               heroTag: 'fab_editor',
@@ -535,11 +556,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           : ListenableBuilder(
               listenable: _controller,
               builder: (context, _) {
-                return _controller.blocks.isEmpty
-                    ? _EmptyEditor(colors: colors)
-                    : _reorderMode
-                    ? _buildReorderList(colors)
-                    : _buildNormalList(colors);
+                if (_controller.blocks.isEmpty) {
+                  return _EmptyEditor(colors: colors);
+                }
+                if (_manageMode) {
+                  return _buildManageList(colors);
+                }
+                return _buildNormalList(colors);
               },
             ),
     );
@@ -562,44 +585,108 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   // ── Reorder list (card backgrounds + drag handles) ───────
-  Widget _buildReorderList(WasurenagusaColorScheme colors) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
-          child: Text(
-            'Hold a block to drag and reorganize',
-            style: TextStyle(
-              color: colors.onSurfaceVariant,
-              fontSize: 13,
-              fontStyle: FontStyle.italic,
+  Widget _buildManageList(WasurenagusaColorScheme colors) {
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 8, bottom: 32),
+      itemCount: _controller.blocks.length,
+      itemBuilder: (context, i) {
+        final block = _controller.blocks[i];
+        final isDragging = _draggingIndex == i;
+        final isTarget = _targetIndex == i && _draggingIndex != i;
+        final isSelected = _selectedBlockIds.contains(block.id);
+
+        return _ManageCard(
+          key: _keyFor(i),
+          colors: colors,
+          isDragging: isDragging,
+          isTarget: isTarget,
+          isSelected: isSelected,
+          deleteEnabled: _deleteEnabled,
+          reorderEnabled: _reorderEnabled,
+          onToggleSelect: _deleteEnabled
+              ? () => setState(() {
+                  if (isSelected) {
+                    _selectedBlockIds.remove(block.id);
+                  } else {
+                    _selectedBlockIds.add(block.id!);
+                  }
+                })
+              : null,
+          onDragStart: _reorderEnabled
+              ? (details) => _onDragStart(i, details)
+              : null,
+          onDragUpdate: _reorderEnabled
+              ? (details) => _onDragUpdate(details)
+              : null,
+          onDragEnd: _reorderEnabled ? (_) => _onDragEnd() : null,
+          child: _buildBlockWidget(block, i, colors),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDeleteSelected() async {
+    if (_selectedBlockIds.isEmpty) return;
+    final colors = WasurenagusaTheme.of(context).colors;
+    final count = _selectedBlockIds.length;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Delete ${count == 1 ? '1 block' : '$count blocks'}?',
+          style: TextStyle(
+            color: colors.onSurface,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Text(
+          'This cannot be undone.',
+          style: TextStyle(color: colors.onSurfaceVariant, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: colors.onSurfaceVariant),
             ),
           ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.only(top: 4, bottom: 96),
-            itemCount: _controller.blocks.length,
-            itemBuilder: (context, i) {
-              final block = _controller.blocks[i];
-              final isDragging = _draggingIndex == i;
-              final isTarget = _targetIndex == i && _draggingIndex != i;
-
-              return _DragCard(
-                key: _keyFor(i),
-                colors: colors,
-                isDragging: isDragging,
-                isTarget: isTarget,
-                onDragStart: (details) => _onDragStart(i, details),
-                onDragUpdate: (details) => _onDragUpdate(details),
-                onDragEnd: (_) => _onDragEnd(),
-                child: _buildBlockWidget(block, i, colors),
-              );
-            },
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Delete',
+              style: TextStyle(
+                color: const Color(0xFFCF6679),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
+
+    if (confirmed != true) return;
+
+    // Delete in reverse index order so indices don't shift
+    final indices =
+        _selectedBlockIds
+            .map((id) => _controller.blocks.indexWhere((b) => b.id == id))
+            .where((i) => i != -1)
+            .toList()
+          ..sort((a, b) => b.compareTo(a));
+
+    for (final index in indices) {
+      await _controller.deleteBlock(index);
+    }
+
+    setState(() {
+      _selectedBlockIds.clear();
+      _deleteEnabled = false;
+    });
   }
 
   void _onDragStart(int index, LongPressStartDetails details) {
@@ -729,12 +816,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             _controller.onBlockUnfocused(-block.id!);
           },
         );
-      case BlockType.divider:
-        return DividerBlockWidget(
-          block: block,
-          colors: colors,
-          onDelete: () => _controller.deleteBlock(index),
-        );
       case BlockType.quote:
         return QuoteBlockWidget(
           block: block,
@@ -767,6 +848,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           onDelete: () => _controller.deleteBlock(index),
           onSave: (data) => _controller.updateTableData(index, data),
         );
+      case BlockType.divider:
+        return const SizedBox.shrink();
     }
   }
 }
@@ -775,29 +858,38 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 // Reorder card wrapper
 // ─────────────────────────────────────────────
 
-class _DragCard extends StatelessWidget {
+class _ManageCard extends StatelessWidget {
   final WasurenagusaColorScheme colors;
   final bool isDragging;
   final bool isTarget;
-  final void Function(LongPressStartDetails) onDragStart;
-  final void Function(LongPressMoveUpdateDetails) onDragUpdate;
-  final void Function(LongPressEndDetails) onDragEnd;
+  final bool isSelected;
+  final bool deleteEnabled;
+  final bool reorderEnabled;
+  final VoidCallback? onToggleSelect;
+  final void Function(LongPressStartDetails)? onDragStart;
+  final void Function(LongPressMoveUpdateDetails)? onDragUpdate;
+  final void Function(LongPressEndDetails)? onDragEnd;
   final Widget child;
 
-  const _DragCard({
+  const _ManageCard({
     super.key,
     required this.colors,
     required this.isDragging,
     required this.isTarget,
-    required this.onDragStart,
-    required this.onDragUpdate,
-    required this.onDragEnd,
+    required this.isSelected,
+    required this.deleteEnabled,
+    required this.reorderEnabled,
     required this.child,
+    this.onToggleSelect,
+    this.onDragStart,
+    this.onDragUpdate,
+    this.onDragEnd,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      onTap: onToggleSelect,
       onLongPressStart: onDragStart,
       onLongPressMoveUpdate: onDragUpdate,
       onLongPressEnd: onDragEnd,
@@ -805,22 +897,50 @@ class _DragCard extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: isDragging
+          color: isSelected
+              ? colors.accent.withValues(alpha: 0.12)
+              : isDragging
               ? colors.accent.withValues(alpha: 0.08)
               : isTarget
               ? colors.accent.withValues(alpha: 0.18)
               : colors.surfaceVariant,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isDragging
+            color: isSelected
+                ? colors.accent
+                : isDragging
                 ? colors.accent.withValues(alpha: 0.3)
                 : isTarget
                 ? colors.accent
                 : colors.divider,
-            width: isTarget ? 2 : 1,
+            width: isSelected || isTarget ? 2 : 1,
           ),
         ),
-        child: AbsorbPointer(absorbing: true, child: child),
+        child: Row(
+          children: [
+            if (deleteEnabled)
+              Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: Icon(
+                  isSelected
+                      ? Icons.check_box_rounded
+                      : Icons.check_box_outline_blank_rounded,
+                  color: isSelected ? colors.accent : colors.onSurfaceVariant,
+                  size: 22,
+                ),
+              ),
+            Expanded(child: AbsorbPointer(absorbing: true, child: child)),
+            if (reorderEnabled)
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Icon(
+                  Icons.drag_handle_rounded,
+                  color: colors.onSurfaceVariant,
+                  size: 22,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1043,6 +1163,146 @@ class _EmptyEditor extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ManageToolbar extends StatelessWidget {
+  final WasurenagusaColorScheme colors;
+  final bool deleteEnabled;
+  final bool reorderEnabled;
+  final int selectedCount;
+  final VoidCallback onDeleteMode;
+  final VoidCallback onReorderMode;
+  final VoidCallback onConfirmDelete;
+
+  const _ManageToolbar({
+    required this.colors,
+    required this.deleteEnabled,
+    required this.reorderEnabled,
+    required this.selectedCount,
+    required this.onDeleteMode,
+    required this.onReorderMode,
+    required this.onConfirmDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.divider, width: 1)),
+      ),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 12,
+        bottom: bottomPadding + 12,
+      ),
+      child: deleteEnabled && selectedCount > 0
+          ? Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '$selectedCount block${selectedCount == 1 ? '' : 's'} selected',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFCF6679),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: onConfirmDelete,
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: const Text('Delete selected'),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: _ManageButton(
+                    label: 'Select & Delete',
+                    icon: Icons.delete_outline_rounded,
+                    colors: colors,
+                    active: deleteEnabled,
+                    onTap: onDeleteMode,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ManageButton(
+                    label: 'Reorder',
+                    icon: Icons.swap_vert_rounded,
+                    colors: colors,
+                    active: reorderEnabled,
+                    onTap: onReorderMode,
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _ManageButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final WasurenagusaColorScheme colors;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _ManageButton({
+    required this.label,
+    required this.icon,
+    required this.colors,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: active
+              ? colors.accent.withValues(alpha: 0.15)
+              : colors.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: active ? colors.accent : colors.divider),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: active ? colors.accent : colors.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: active ? colors.accent : colors.onSurfaceVariant,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
