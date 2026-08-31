@@ -1,6 +1,6 @@
 name: wasurenagusa
 description: ""
-publish_to: 'none'
+publish_to: "none"
 
 version: 0.6.0+1
 
@@ -19,11 +19,12 @@ dependencies:
   intl: ^0.20.3
   shared_preferences: ^2.3.0
   cupertino_icons: ^1.0.8
-  package_info_plus: ^8.0.0
+  package_info_plus: ^10.2.1
   emoji_picker_flutter: ^4.3.0
   flutter_colorpicker: ^1.1.0
-  share_plus: ^10.0.0
-file_picker: ^8.0.0
+  share_plus: ^13.3.0
+  file_picker: ^12.1.2
+  archive: ^4.2.0
 
 dev_dependencies:
   flutter_test:

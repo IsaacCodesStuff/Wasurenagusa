@@ -5,6 +5,8 @@ import '../../widgets/settings_section.dart';
 import '../../widgets/settings_tile.dart';
 import 'theme_mode_screen.dart';
 import 'palette_screen.dart';
+import 'export_screen.dart';
+import 'import_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -190,6 +192,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: (val) => registry.setMarkdownEnabled(val),
                   activeThumbColor: colors.accent,
                 ),
+              ),
+            ],
+          ),
+          SettingsSection(
+            title: 'Backup & Restore',
+            children: [
+              SettingsTile(
+                title: 'Export notes',
+                subtitle: 'Save notes as a ZIP file',
+                isFirst: true,
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const ExportScreen())),
+              ),
+              SettingsTile(
+                title: 'Import notes',
+                subtitle: 'Restore notes from a ZIP file',
+                isLast: true,
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const ImportScreen())),
               ),
             ],
           ),
