@@ -848,6 +848,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           onDelete: () => _controller.deleteBlock(index),
           onSave: (data) => _controller.updateTableData(index, data),
         );
+      case BlockType.voice:
+        return const SizedBox.shrink(); // placeholder until widget exists
+
+      case BlockType.image:
+        return const SizedBox.shrink(); // placeholder until widget exists
+
       case BlockType.divider:
         return const SizedBox.shrink();
     }

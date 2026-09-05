@@ -2,7 +2,7 @@ name: wasurenagusa
 description: ""
 publish_to: "none"
 
-version: 0.6.0+1
+version: 0.7.0+1
 
 environment:
   sdk: ^3.12.2
@@ -25,6 +25,9 @@ dependencies:
   share_plus: ^13.3.0
   file_picker: ^12.1.2
   archive: ^4.2.0
+  record: ^5.2.0
+  just_audio: ^0.9.42
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

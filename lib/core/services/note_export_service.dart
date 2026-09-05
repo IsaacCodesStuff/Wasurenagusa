@@ -154,6 +154,11 @@ class NoteExportService {
       //   }
       // ──────────────────────────────────────────────────────────────────
 
+      case BlockType.voice:
+      case BlockType.image:
+        // TODO(v0.7.0): implement media block serialization here.
+        return null;
+
       case BlockType.divider:
         return null;
     }
@@ -326,8 +331,9 @@ class NoteImportService {
       // v2+: notes live in notes/<uuid>.json
       for (final archiveFile in archive.files) {
         if (!archiveFile.name.startsWith('notes/') ||
-            !archiveFile.name.endsWith('.json'))
+            !archiveFile.name.endsWith('.json')) {
           continue;
+        }
         try {
           final content = utf8.decode(archiveFile.content as List<int>);
           final json = jsonDecode(content) as Map<String, dynamic>;
@@ -546,6 +552,11 @@ class NoteImportService {
       //   3. Copy the file into app private media storage with a new UUID name
       //   4. Create the block in the DB with the new local file path in content
       // ──────────────────────────────────────────────────────────────────
+
+      case BlockType.voice:
+      case BlockType.image:
+        // TODO(v0.7.0): implement media block import here.
+        break;
 
       case BlockType.divider:
         break;

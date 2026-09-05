@@ -11,7 +11,9 @@ enum BlockType {
   quote,
   code,
   drawing,
-  table;
+  table,
+  voice,
+  image;
 
   String get dbValue => switch (this) {
     BlockType.text => 'text',
@@ -24,6 +26,8 @@ enum BlockType {
     BlockType.code => 'code',
     BlockType.drawing => 'drawing',
     BlockType.table => 'table',
+    BlockType.voice => 'voice',
+    BlockType.image => 'image',
   };
 
   static BlockType fromDb(String value) => switch (value) {
@@ -37,6 +41,8 @@ enum BlockType {
     'code' => BlockType.code,
     'drawing' => BlockType.drawing,
     'table' => BlockType.table,
+    'voice' => BlockType.voice,
+    'image' => BlockType.image,
     _ => BlockType.text,
   };
 
@@ -135,27 +141,23 @@ class TableData {
         cells: cells ?? this.cells,
       );
 
-  /// Returns a new TableData with the value at [row][col] updated.
   TableData withCell(int row, int col, String value) {
     final newCells = cells.map((r) => List<String>.from(r)).toList();
     newCells[row][col] = value;
     return copyWith(cells: newCells);
   }
 
-  /// Add a row at the bottom.
   TableData addRow() {
     final newCells = cells.map((r) => List<String>.from(r)).toList()
       ..add(List.generate(cols, (_) => ''));
     return copyWith(rows: rows + 1, cells: newCells);
   }
 
-  /// Add a column on the right.
   TableData addCol() {
     final newCells = cells.map((r) => List<String>.from(r)..add('')).toList();
     return copyWith(cols: cols + 1, cells: newCells);
   }
 
-  /// Remove the last row (minimum 1).
   TableData removeRow() {
     if (rows <= 1) return this;
     final newCells = cells.map((r) => List<String>.from(r)).toList()
@@ -163,7 +165,6 @@ class TableData {
     return copyWith(rows: rows - 1, cells: newCells);
   }
 
-  /// Remove the last column (minimum 1).
   TableData removeCol() {
     if (cols <= 1) return this;
     final newCells = cells
@@ -183,6 +184,54 @@ class TableData {
         .toList();
     return TableData(rows: rows, cols: cols, cells: cells);
   }
+}
+
+// ─────────────────────────────────────────────
+// Voice data model
+// ─────────────────────────────────────────────
+
+class VoiceData {
+  /// Filename only (e.g. "abc123.m4a") — resolved at runtime via MediaService.
+  final String filename;
+
+  /// Duration in milliseconds, recorded after the file is saved.
+  final int? durationMs;
+
+  const VoiceData({required this.filename, this.durationMs});
+
+  Map<String, dynamic> toMap() => {
+    'filePath': filename,
+    if (durationMs != null) 'durationMs': durationMs,
+  };
+
+  factory VoiceData.fromMap(Map<String, dynamic> map) => VoiceData(
+    filename: map['filePath'] as String,
+    durationMs: map['durationMs'] as int?,
+  );
+
+  String get displayDuration {
+    if (durationMs == null) return '';
+    final total = durationMs! ~/ 1000;
+    final m = total ~/ 60;
+    final s = total % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+}
+
+// ─────────────────────────────────────────────
+// Image data model
+// ─────────────────────────────────────────────
+
+class ImageData {
+  /// Filename only (e.g. "abc123.jpg") — resolved at runtime via MediaService.
+  final String filename;
+
+  const ImageData({required this.filename});
+
+  Map<String, dynamic> toMap() => {'filePath': filename};
+
+  factory ImageData.fromMap(Map<String, dynamic> map) =>
+      ImageData(filename: map['filePath'] as String);
 }
 
 // ─────────────────────────────────────────────
@@ -228,6 +277,8 @@ class NoteBlockModel {
   final List<BlockItemModel> items;
   final DrawingData? drawingData;
   final TableData? tableData;
+  final VoiceData? voiceData;
+  final ImageData? imageData;
 
   const NoteBlockModel({
     this.id,
@@ -238,6 +289,8 @@ class NoteBlockModel {
     this.items = const [],
     this.drawingData,
     this.tableData,
+    this.voiceData,
+    this.imageData,
   });
 
   NoteBlockModel copyWith({
@@ -249,6 +302,8 @@ class NoteBlockModel {
     List<BlockItemModel>? items,
     DrawingData? drawingData,
     TableData? tableData,
+    VoiceData? voiceData,
+    ImageData? imageData,
   }) => NoteBlockModel(
     id: id ?? this.id,
     noteId: noteId ?? this.noteId,
@@ -258,6 +313,8 @@ class NoteBlockModel {
     items: items ?? this.items,
     drawingData: drawingData ?? this.drawingData,
     tableData: tableData ?? this.tableData,
+    voiceData: voiceData ?? this.voiceData,
+    imageData: imageData ?? this.imageData,
   );
 
   String? toJson() {
@@ -269,6 +326,12 @@ class NoteBlockModel {
     }
     if (type == BlockType.table) {
       return jsonEncode((tableData ?? TableData.empty()).toMap());
+    }
+    if (type == BlockType.voice && voiceData != null) {
+      return jsonEncode(voiceData!.toMap());
+    }
+    if (type == BlockType.image && imageData != null) {
+      return jsonEncode(imageData!.toMap());
     }
     return null;
   }
@@ -302,6 +365,28 @@ class NoteBlockModel {
       return TableData.fromMap(map);
     } catch (_) {
       return TableData.empty();
+    }
+  }
+
+  static VoiceData? voiceFromJson(String? json) {
+    if (json == null) return null;
+    try {
+      final map = jsonDecode(json) as Map<String, dynamic>;
+      if (!map.containsKey('filePath')) return null;
+      return VoiceData.fromMap(map);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static ImageData? imageFromJson(String? json) {
+    if (json == null) return null;
+    try {
+      final map = jsonDecode(json) as Map<String, dynamic>;
+      if (!map.containsKey('filePath')) return null;
+      return ImageData.fromMap(map);
+    } catch (_) {
+      return null;
     }
   }
 }

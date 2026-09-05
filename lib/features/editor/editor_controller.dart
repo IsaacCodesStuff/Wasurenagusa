@@ -98,9 +98,6 @@ class EditorController extends ChangeNotifier {
     for (final dbBlock in dbBlocks) {
       final type = BlockType.fromDb(dbBlock.type);
 
-      // Silently skip legacy divider blocks — deprecated since 0.3.0,
-      // removed from UI since 0.5.0. The DB row is left untouched until
-      // the note is next saved, at which point it simply won't be written back.
       if (type == BlockType.divider) continue;
 
       List<BlockItemModel> items = [];
@@ -139,6 +136,12 @@ class EditorController extends ChangeNotifier {
           tableData: type == BlockType.table
               ? NoteBlockModel.tableFromJson(dbBlock.content)
               : null,
+          voiceData: type == BlockType.voice
+              ? NoteBlockModel.voiceFromJson(dbBlock.content)
+              : null,
+          imageData: type == BlockType.image
+              ? NoteBlockModel.imageFromJson(dbBlock.content)
+              : null,
         ),
       );
     }
@@ -149,7 +152,6 @@ class EditorController extends ChangeNotifier {
   Future<void> addBlock(BlockType type, {TableData? initialTableData}) async {
     final position = _blocks.length;
 
-    // Serialize initial content for table blocks
     String? initialContent;
     if (type == BlockType.table) {
       final data = initialTableData ?? TableData.empty();
@@ -160,6 +162,8 @@ class EditorController extends ChangeNotifier {
         tableData: data,
       ).toJson();
     }
+    // Voice and image blocks start with no content — the widget
+    // handles recording/picking and calls updateVoiceData/updateImageData.
 
     final id = await blockRepo.createBlock(
       noteId: noteId,
@@ -191,6 +195,8 @@ class EditorController extends ChangeNotifier {
         tableData: type == BlockType.table
             ? (initialTableData ?? TableData.empty())
             : null,
+        voiceData: null, // set after recording completes
+        imageData: null, // set after pick/capture completes
       ),
     );
 
@@ -227,6 +233,34 @@ class EditorController extends ChangeNotifier {
   Future<void> updateTableData(int index, TableData data) async {
     final block = _blocks[index];
     final updated = block.copyWith(tableData: data);
+    _blocks[index] = updated;
+
+    final dbBlock = await _getDbBlock(block.id!);
+    if (dbBlock != null) {
+      await blockRepo.updateBlock(
+        dbBlock.copyWith(content: Value(updated.toJson())),
+      );
+    }
+    notifyListeners();
+  }
+
+  Future<void> updateVoiceData(int index, VoiceData data) async {
+    final block = _blocks[index];
+    final updated = block.copyWith(voiceData: data);
+    _blocks[index] = updated;
+
+    final dbBlock = await _getDbBlock(block.id!);
+    if (dbBlock != null) {
+      await blockRepo.updateBlock(
+        dbBlock.copyWith(content: Value(updated.toJson())),
+      );
+    }
+    notifyListeners();
+  }
+
+  Future<void> updateImageData(int index, ImageData data) async {
+    final block = _blocks[index];
+    final updated = block.copyWith(imageData: data);
     _blocks[index] = updated;
 
     final dbBlock = await _getDbBlock(block.id!);
