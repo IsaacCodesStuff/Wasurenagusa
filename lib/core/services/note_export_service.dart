@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:uuid/uuid.dart';
 import '../database/app_database.dart';
 import '../repositories/block_repository.dart';
 import '../repositories/note_repository.dart';
@@ -12,8 +12,11 @@ import '../repositories/notebook_repository.dart';
 import '../repositories/section_repository.dart';
 import '../models/note_block_model.dart';
 
-const int _exportSchemaVersion = 1;
+const int _exportSchemaVersion = 2;
 const String _exportFormat = 'wasurenagusa';
+const String _appVersion = '0.7.0';
+const _encoder = JsonEncoder.withIndent('  ');
+const _uuid = Uuid();
 
 // ─────────────────────────────────────────────
 // Export service
@@ -52,25 +55,24 @@ class NoteExportService {
     return items;
   }
 
-  // Serializes a single note to a JSON map
-  Future<Map<String, dynamic>> _serializeNote(NoteExportItem item) async {
+  // Serializes a single note to a JSON map (lean — no archive-level metadata)
+  Future<Map<String, dynamic>> _serializeNote(
+    NoteExportItem item,
+    List<_MediaEntry> mediaCollector,
+  ) async {
     final blocks = await blockRepo.getByNote(item.note.id);
     final serializedBlocks = <Map<String, dynamic>>[];
 
     for (final block in blocks) {
       final type = BlockType.fromDb(block.type);
-
-      // Skip deprecated divider blocks
       if (type == BlockType.divider) continue;
 
-      final blockMap = await _serializeBlock(block, type);
+      final blockMap = await _serializeBlock(block, type, mediaCollector);
       if (blockMap != null) serializedBlocks.add(blockMap);
     }
 
     return {
-      'format': _exportFormat,
-      'schemaVersion': _exportSchemaVersion,
-      'appVersion': '0.6.0',
+      'id': _uuid.v4(),
       'notebook': {
         'name': item.notebook.name,
         'emoji': item.notebook.icon ?? '📓',
@@ -87,6 +89,7 @@ class NoteExportService {
   Future<Map<String, dynamic>?> _serializeBlock(
     NoteBlock block,
     BlockType type,
+    List<_MediaEntry> mediaCollector,
   ) async {
     switch (type) {
       case BlockType.text:
@@ -134,50 +137,107 @@ class NoteExportService {
           'cells': data.cells,
         };
 
+      // ── Media blocks (v0.7.0) ──────────────────────────────────────────
+      // TODO(v0.7.0): implement voice and image block serialization here.
+      // Each media block should:
+      //   1. Read the file path from block.content
+      //   2. Generate a UUID v4 mediaId
+      //   3. Add a _MediaEntry to mediaCollector (path, mediaId, extension)
+      //   4. Return the block map with mediaId, originalFilename, mimeType
+      //
+      // Example shape:
+      //   {
+      //     'type': 'voice',
+      //     'mediaId': '<uuid>',
+      //     'originalFilename': 'recording.m4a',
+      //     'mimeType': 'audio/m4a',
+      //   }
+      // ──────────────────────────────────────────────────────────────────
+
       case BlockType.divider:
-        return null; // silently skip
+        return null;
     }
   }
 
-  // Exports selected notes as a ZIP file and triggers share sheet
-  Future<void> exportNotes({
+  // Exports selected notes as a ZIP file via SAF save picker
+  Future<ExportResult> exportNotes({
     required List<NoteExportItem> items,
     required String zipName,
     required BuildContext context,
   }) async {
-    final tempDir = await getTemporaryDirectory();
+    final mediaCollector = <_MediaEntry>[];
     final archive = Archive();
 
-    for (int i = 0; i < items.length; i++) {
-      final item = items[i];
-      final json = await _serializeNote(item);
-      final jsonBytes = utf8.encode(jsonEncode(json));
-      final safeName = _safeFilename(item.note.title, i);
+    // 1. Serialize notes into notes/<uuid>.json
+    for (final item in items) {
+      final noteMap = await _serializeNote(item, mediaCollector);
+      final noteJson = _encoder.convert(noteMap);
+      final noteBytes = utf8.encode(noteJson);
+      final noteId = noteMap['id'] as String;
       archive.addFile(
-        ArchiveFile('$safeName.json', jsonBytes.length, jsonBytes),
+        ArchiveFile('notes/$noteId.json', noteBytes.length, noteBytes),
       );
     }
 
-    final encoder = ZipEncoder();
-    final zipBytes = encoder.encode(archive);
+    // 2. Bundle media files into media/<uuid>.<ext>
+    // TODO(v0.7.0): uncomment once media blocks are implemented.
+    // for (final entry in mediaCollector) {
+    //   final file = File(entry.filePath);
+    //   if (!await file.exists()) continue;
+    //   final bytes = await file.readAsBytes();
+    //   archive.addFile(
+    //     ArchiveFile('media/${entry.mediaId}.${entry.extension}', bytes.length, bytes),
+    //   );
+    // }
 
+    // 3. Build manifest.json
+    final manifest = {
+      'format': _exportFormat,
+      'schemaVersion': _exportSchemaVersion,
+      'appVersion': _appVersion,
+      'exportedAt': DateTime.now().toUtc().toIso8601String(),
+      'noteCount': items.length,
+      'mediaCount': mediaCollector.length,
+    };
+    final manifestBytes = utf8.encode(_encoder.convert(manifest));
+    archive.addFile(
+      ArchiveFile('manifest.json', manifestBytes.length, manifestBytes),
+    );
+
+    // 4. Encode ZIP in memory
+    final zipBytes = ZipEncoder().encode(archive);
+
+    // 5. SAF save picker — user chooses destination
     final safeZipName = zipName.trim().isEmpty
         ? 'wasurenagusa_export'
-        : zipName.trim();
-    final zipFile = File('${tempDir.path}/$safeZipName.zip');
-    await zipFile.writeAsBytes(zipBytes);
+        : zipName.trim().replaceAll(RegExp(r'[^\w\s\-]'), '').trim();
 
-    await SharePlus.instance.share(
-      ShareParams(files: [XFile(zipFile.path)], text: 'Wasurenagusa export'),
+    final savePath = await FilePicker.saveFile(
+      dialogTitle: 'Save Wasurenagusa export',
+      fileName: '$safeZipName.zip',
+      // On Android, passing bytes causes FilePicker to write the file itself.
+      // On Linux desktop, saveFile only returns the path — we write it below.
+      bytes: Uint8List.fromList(zipBytes),
     );
-  }
 
-  String _safeFilename(String title, int index) {
-    final safe = title
-        .replaceAll(RegExp(r'[^\w\s-]'), '')
-        .trim()
-        .replaceAll(RegExp(r'\s+'), '_');
-    return safe.isEmpty ? 'note_$index' : '${safe}_$index';
+    if (savePath == null) return ExportResult.cancelled();
+
+    // On Android, FilePicker.saveFile() with bytes writes the file itself.
+    // The returned URI is a SAF URI, not a real filesystem path — don't
+    // try to open it as a File. On Linux/desktop, it's a real path and
+    // we write manually.
+    final String destPath;
+    if (Platform.isAndroid) {
+      destPath = savePath.toString(); // keep as URI string for display
+    } else {
+      destPath = savePath.toFilePath();
+      final dest = File(destPath);
+      if (!await dest.exists() || await dest.length() == 0) {
+        await dest.writeAsBytes(zipBytes);
+      }
+    }
+
+    return ExportResult.success(destPath);
   }
 }
 
@@ -200,7 +260,6 @@ class NoteImportService {
 
   // Opens file picker and reads ZIP contents
   Future<NoteImportBundle?> pickAndReadZip() async {
-    // 1. Use the new static method for single file picking
     final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['zip'],
@@ -208,35 +267,131 @@ class NoteImportService {
 
     if (file == null) return null;
 
-    // 2. Read bytes directly using the new PlatformFile method
     final bytes = await file.readAsBytes();
+
     final zipName = file.name;
+    late Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(bytes);
+    } catch (_) {
+      return NoteImportBundle.invalid(zipName: zipName);
+    }
 
-    final archive = ZipDecoder().decodeBytes(bytes);
-    final notes = <NoteImportEntry>[];
+    // ── Determine schema version via manifest.json ────────────────────
+    final manifestFile = archive.findFile('manifest.json');
+    int schemaVersion = 1; // assume legacy if no manifest
 
-    for (final archiveFile in archive) {
-      if (!archiveFile.name.endsWith('.json')) continue;
-      final content = utf8.decode(archiveFile.content as List<int>);
+    if (manifestFile != null) {
       try {
-        final json = jsonDecode(content) as Map<String, dynamic>;
-        final entry = _parseEntry(json, archiveFile.name);
-        if (entry != null) notes.add(entry);
+        final manifestJson =
+            jsonDecode(utf8.decode(manifestFile.content as List<int>))
+                as Map<String, dynamic>;
+
+        if (manifestJson['format'] != _exportFormat) {
+          return NoteImportBundle.invalid(zipName: zipName);
+        }
+
+        schemaVersion = manifestJson['schemaVersion'] as int? ?? 1;
+
+        // Informational count validation (warn only — don't crash)
+        final manifestNoteCount = manifestJson['noteCount'] as int?;
+        final manifestMediaCount = manifestJson['mediaCount'] as int?;
+        final actualNoteCount = archive.files
+            .where((f) => f.name.startsWith('notes/'))
+            .length;
+        final actualMediaCount = archive.files
+            .where((f) => f.name.startsWith('media/'))
+            .length;
+
+        if (manifestNoteCount != null && manifestNoteCount != actualNoteCount) {
+          debugPrint(
+            '[Import] Note count mismatch: manifest=$manifestNoteCount, actual=$actualNoteCount',
+          );
+        }
+        if (manifestMediaCount != null &&
+            manifestMediaCount != actualMediaCount) {
+          debugPrint(
+            '[Import] Media count mismatch: manifest=$manifestMediaCount, actual=$actualMediaCount',
+          );
+        }
       } catch (_) {
-        // Skip malformed files silently
+        return NoteImportBundle.invalid(zipName: zipName);
       }
     }
 
-    return NoteImportBundle(zipName: zipName, entries: notes);
+    // ── Parse notes based on schema version ──────────────────────────
+    final notes = <NoteImportEntry>[];
+
+    if (schemaVersion >= 2) {
+      // v2+: notes live in notes/<uuid>.json
+      for (final archiveFile in archive.files) {
+        if (!archiveFile.name.startsWith('notes/') ||
+            !archiveFile.name.endsWith('.json'))
+          continue;
+        try {
+          final content = utf8.decode(archiveFile.content as List<int>);
+          final json = jsonDecode(content) as Map<String, dynamic>;
+          final entry = _parseEntryV2(json, archiveFile.name);
+          if (entry != null) notes.add(entry);
+        } catch (_) {
+          // Skip malformed note files silently
+        }
+      }
+    } else {
+      // v1 legacy: flat .json files at archive root
+      for (final archiveFile in archive.files) {
+        if (archiveFile.isFile != true) continue;
+        if (!archiveFile.name.endsWith('.json')) continue;
+        if (archiveFile.name.contains('/')) continue; // skip subdirectories
+        try {
+          final content = utf8.decode(archiveFile.content as List<int>);
+          final json = jsonDecode(content) as Map<String, dynamic>;
+          final entry = _parseEntryV1(json, archiveFile.name);
+          if (entry != null) notes.add(entry);
+        } catch (_) {
+          // Skip malformed files silently
+        }
+      }
+    }
+
+    // ── Extract media files into app temp dir for import ─────────────
+    // TODO(v0.7.0): extract media/<uuid>.<ext> files from archive
+    // into getTemporaryDirectory() keyed by mediaId so _importBlock
+    // can resolve them during note reconstruction.
+
+    return NoteImportBundle(
+      zipName: zipName,
+      entries: notes,
+      schemaVersion: schemaVersion,
+    );
   }
 
-  NoteImportEntry? _parseEntry(Map<String, dynamic> json, String filename) {
+  NoteImportEntry? _parseEntryV2(Map<String, dynamic> json, String filename) {
+    final notebookMap = json['notebook'] as Map<String, dynamic>?;
+    final sectionMap = json['section'] as Map<String, dynamic>?;
+    final noteMap = json['note'] as Map<String, dynamic>?;
+    if (notebookMap == null || sectionMap == null || noteMap == null) {
+      return null;
+    }
+
+    return NoteImportEntry(
+      filename: filename,
+      notebookName: notebookMap['name'] as String? ?? 'Untitled notebook',
+      notebookEmoji: notebookMap['emoji'] as String? ?? '📓',
+      sectionName: sectionMap['name'] as String? ?? 'Untitled section',
+      noteTitle: noteMap['title'] as String? ?? '',
+      colorTag: noteMap['colorTag'] as String?,
+      blocks: (noteMap['blocks'] as List? ?? []).cast<Map<String, dynamic>>(),
+    );
+  }
+
+  NoteImportEntry? _parseEntryV1(Map<String, dynamic> json, String filename) {
+    // v1 carried format/schemaVersion at root — validate format field
     if (json['format'] != _exportFormat) return null;
 
     final notebookMap = json['notebook'] as Map<String, dynamic>?;
     final sectionMap = json['section'] as Map<String, dynamic>?;
     final noteMap = json['note'] as Map<String, dynamic>?;
-
     if (notebookMap == null || sectionMap == null || noteMap == null) {
       return null;
     }
@@ -253,7 +408,10 @@ class NoteImportService {
   }
 
   // Imports selected entries into the database
-  Future<void> importEntries(List<NoteImportEntry> entries) async {
+  Future<void> importEntries(
+    List<NoteImportEntry> entries, {
+    Map<String, String> mediaTempPaths = const {},
+  }) async {
     for (final entry in entries) {
       // Find or create notebook
       final notebooks = await notebookRepo.watchAll().first;
@@ -266,9 +424,8 @@ class NoteImportService {
           name: entry.notebookName,
           icon: entry.notebookEmoji,
         );
-        final updated = await notebookRepo.getById(id);
-        if (updated == null) continue;
-        notebook = updated;
+        notebook = await notebookRepo.getById(id);
+        if (notebook == null) continue;
       }
 
       // Find or create section
@@ -298,7 +455,12 @@ class NoteImportService {
 
       // Create blocks in order
       for (int i = 0; i < entry.blocks.length; i++) {
-        await _importBlock(noteId, entry.blocks[i], i);
+        await _importBlock(
+          noteId,
+          entry.blocks[i],
+          i,
+          mediaTempPaths: mediaTempPaths,
+        );
       }
     }
   }
@@ -306,12 +468,11 @@ class NoteImportService {
   Future<void> _importBlock(
     int noteId,
     Map<String, dynamic> blockMap,
-    int position,
-  ) async {
+    int position, {
+    Map<String, String> mediaTempPaths = const {},
+  }) async {
     final typeStr = blockMap['type'] as String?;
     if (typeStr == null) return;
-
-    // Skip legacy divider blocks in imported files
     if (typeStr == 'divider') return;
 
     final type = BlockType.fromDb(typeStr);
@@ -322,12 +483,11 @@ class NoteImportService {
       case BlockType.quote:
       case BlockType.code:
         final text = blockMap['text'] as String? ?? '';
-        final content = jsonEncode({'text': text});
         await blockRepo.createBlock(
           noteId: noteId,
           type: type.dbValue,
           position: position,
-          content: content,
+          content: jsonEncode({'text': text}),
         );
         break;
 
@@ -354,36 +514,82 @@ class NoteImportService {
       case BlockType.drawing:
         final strokes = (blockMap['strokes'] as List? ?? [])
             .cast<Map<String, dynamic>>();
-        final drawingMap = {
-          'version': blockMap['version'] ?? 1,
-          'strokes': strokes,
-        };
         await blockRepo.createBlock(
           noteId: noteId,
           type: 'drawing',
           position: position,
-          content: jsonEncode(drawingMap),
+          content: jsonEncode({
+            'version': blockMap['version'] ?? 1,
+            'strokes': strokes,
+          }),
         );
         break;
 
       case BlockType.table:
-        final tableMap = {
-          'rows': blockMap['rows'],
-          'cols': blockMap['cols'],
-          'cells': blockMap['cells'],
-        };
         await blockRepo.createBlock(
           noteId: noteId,
           type: 'table',
           position: position,
-          content: jsonEncode(tableMap),
+          content: jsonEncode({
+            'rows': blockMap['rows'],
+            'cols': blockMap['cols'],
+            'cells': blockMap['cells'],
+          }),
         );
         break;
 
+      // ── Media blocks (v0.7.0) ──────────────────────────────────────────
+      // TODO(v0.7.0): implement voice and image block import here.
+      // Each media block should:
+      //   1. Read mediaId from blockMap
+      //   2. Look up the temp file path in mediaTempPaths[mediaId]
+      //   3. Copy the file into app private media storage with a new UUID name
+      //   4. Create the block in the DB with the new local file path in content
+      // ──────────────────────────────────────────────────────────────────
+
       case BlockType.divider:
-        break; // skip
+        break;
     }
   }
+}
+
+// ─────────────────────────────────────────────
+// Internal helpers
+// ─────────────────────────────────────────────
+
+class _MediaEntry {
+  final String filePath;
+  final String mediaId;
+  final String extension;
+
+  const _MediaEntry({
+    required this.filePath,
+    required this.mediaId,
+    required this.extension,
+  });
+}
+
+// ─────────────────────────────────────────────
+// Result types
+// ─────────────────────────────────────────────
+
+enum ExportStatus { success, cancelled, failure }
+
+class ExportResult {
+  final ExportStatus status;
+  final String? path;
+  final String? errorMessage;
+
+  const ExportResult._({required this.status, this.path, this.errorMessage});
+
+  factory ExportResult.success(String path) =>
+      ExportResult._(status: ExportStatus.success, path: path);
+
+  factory ExportResult.cancelled() =>
+      ExportResult._(status: ExportStatus.cancelled);
+
+  factory ExportResult.failure(String message) =>
+      ExportResult._(status: ExportStatus.failure, errorMessage: message);
 }
 
 // ─────────────────────────────────────────────
@@ -405,8 +611,23 @@ class NoteExportItem {
 class NoteImportBundle {
   final String zipName;
   final List<NoteImportEntry> entries;
+  final int schemaVersion;
+  final bool isInvalid;
 
-  const NoteImportBundle({required this.zipName, required this.entries});
+  const NoteImportBundle({
+    required this.zipName,
+    required this.entries,
+    required this.schemaVersion,
+    this.isInvalid = false,
+  });
+
+  factory NoteImportBundle.invalid({required String zipName}) =>
+      NoteImportBundle(
+        zipName: zipName,
+        entries: [],
+        schemaVersion: 0,
+        isInvalid: true,
+      );
 }
 
 class NoteImportEntry {

@@ -62,11 +62,26 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         sectionRepo: ref.read(sectionRepositoryProvider),
         blockRepo: ref.read(blockRepositoryProvider),
       );
-      await service.exportNotes(
+      final result = await service.exportNotes(
         items: selected,
         zipName: _zipNameController.text,
         context: context,
       );
+
+      if (!mounted) return;
+
+      switch (result.status) {
+        case ExportStatus.success:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Export saved successfully')),
+          );
+        case ExportStatus.cancelled:
+          break; // user dismissed the picker, do nothing
+        case ExportStatus.failure:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Export failed: ${result.errorMessage}')),
+          );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

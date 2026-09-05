@@ -28,12 +28,21 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         blockRepo: ref.read(blockRepositoryProvider),
       );
       final bundle = await service.pickAndReadZip();
-      if (mounted) {
-        setState(() {
-          _bundle = bundle;
-          _selectedIndices.clear();
-        });
+      if (!mounted) return;
+
+      if (bundle != null && bundle.isInvalid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('That file isn\'t a valid Wasurenagusa export.'),
+          ),
+        );
+        return;
       }
+
+      setState(() {
+        _bundle = bundle;
+        _selectedIndices.clear();
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
