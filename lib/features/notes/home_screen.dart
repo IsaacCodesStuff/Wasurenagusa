@@ -152,6 +152,34 @@ class HomeScreen extends ConsumerWidget {
                       _showTableSizePicker(outerContext, ref);
                     },
                   ),
+                  _NoteTypeOption(
+                    icon: Icons.mic_rounded,
+                    label: 'Voice note',
+                    description: 'Record audio inline in a note',
+                    colors: colors,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _createAndOpen(
+                        outerContext,
+                        ref,
+                        BlockType.voice,
+                      );
+                    },
+                  ),
+                  _NoteTypeOption(
+                    icon: Icons.image_outlined,
+                    label: 'Image',
+                    description: 'Attach a photo or capture from camera',
+                    colors: colors,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _createAndOpen(
+                        outerContext,
+                        ref,
+                        BlockType.image,
+                      );
+                    },
+                  ),
                 ],
               ),
             ),

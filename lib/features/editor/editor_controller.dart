@@ -3,6 +3,7 @@ import '../../core/models/note_block_model.dart';
 import '../../core/repositories/block_repository.dart';
 import '../../core/repositories/note_repository.dart';
 import 'package:drift/drift.dart' show Value;
+import '../../core/services/media_service.dart';
 
 class EditorController extends ChangeNotifier {
   final int noteId;
@@ -321,12 +322,20 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> deleteBlock(int index) async {
-    final block = _blocks[index];
-    if (block.id != null) await blockRepo.deleteBlock(block.id!);
-    _blocks.removeAt(index);
-    notifyListeners();
+Future<void> deleteBlock(int index) async {
+  final block = _blocks[index];
+  if (block.id != null) {
+    // Clean up media files before removing the DB row
+    if (block.type == BlockType.voice && block.voiceData != null) {
+      await MediaService.instance.delete(block.voiceData!.filename);
+    } else if (block.type == BlockType.image && block.imageData != null) {
+      await MediaService.instance.delete(block.imageData!.filename);
+    }
+    await blockRepo.deleteBlock(block.id!);
   }
+  _blocks.removeAt(index);
+  notifyListeners();
+}
 
   Future<void> reorderBlocks(int oldIndex, int newIndex) async {
     final block = _blocks.removeAt(oldIndex);
