@@ -54,7 +54,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
   }
 
-  Future<void> _import() async {
+    Future<void> _import() async {
     if (_bundle == null || _selectedIndices.isEmpty) return;
     final selected = _selectedIndices.map((i) => _bundle!.entries[i]).toList();
 
@@ -66,7 +66,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         sectionRepo: ref.read(sectionRepositoryProvider),
         blockRepo: ref.read(blockRepositoryProvider),
       );
-      await service.importEntries(selected);
+      await service.importEntries(
+        selected,
+        mediaTempPaths: _bundle!.mediaTempPaths,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
