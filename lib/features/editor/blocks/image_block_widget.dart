@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/models/note_block_model.dart';
 import '../../../core/services/media_service.dart';
 import '../../../theme/wasurenagusa_theme.dart';
+import '../camera_screen.dart';
 
 const _uuid = Uuid();
 
@@ -44,28 +45,37 @@ class _ImageBlockWidgetState extends State<ImageBlockWidget> {
     if (mounted) setState(() => _resolvedPath = path);
   }
 
-  Future<void> _pickImage(ImageSource source) async {
+  Future<void> _pickFromGallery() async {
     Navigator.pop(context); // close bottom sheet
-
     setState(() => _loading = true);
     try {
-      final picked = await _picker.pickImage(
-        source: source,
-        imageQuality: source == ImageSource.camera ? 85 : null,
-      );
+      final picked = await _picker.pickImage(source: ImageSource.gallery);
       if (picked == null) return;
 
-      final ext = source == ImageSource.camera
-          ? 'jpg'
-          : picked.path.split('.').last.toLowerCase();
+      final ext = picked.path.split('.').last.toLowerCase();
       final filename = '${_uuid.v4()}.$ext';
-
       await MediaService.instance.copyInto(File(picked.path), filename);
       final resolvedPath = await MediaService.instance.resolve(filename);
 
-      final imageData = ImageData(filename: filename);
-      await widget.onSave(imageData);
+      await widget.onSave(ImageData(filename: filename));
+      if (mounted) setState(() => _resolvedPath = resolvedPath);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
+  Future<void> _pickFromCamera() async {
+    Navigator.pop(context); // close bottom sheet
+    final path = await CameraScreen.show(context);
+    if (path == null) return;
+
+    setState(() => _loading = true);
+    try {
+      final filename = '${_uuid.v4()}.jpg';
+      await MediaService.instance.copyInto(File(path), filename);
+      final resolvedPath = await MediaService.instance.resolve(filename);
+
+      await widget.onSave(ImageData(filename: filename));
       if (mounted) setState(() => _resolvedPath = resolvedPath);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -102,14 +112,14 @@ class _ImageBlockWidgetState extends State<ImageBlockWidget> {
                 icon: Icons.photo_library_rounded,
                 label: 'Gallery',
                 colors: colors,
-                onTap: () => _pickImage(ImageSource.gallery),
+                onTap: _pickFromGallery,
               ),
               const SizedBox(height: 8),
               _SourceOption(
                 icon: Icons.camera_alt_rounded,
                 label: 'Camera',
                 colors: colors,
-                onTap: () => _pickImage(ImageSource.camera),
+                onTap: _pickFromCamera,
               ),
               const SizedBox(height: 8),
             ],
@@ -167,9 +177,7 @@ class _ImageBlockWidgetState extends State<ImageBlockWidget> {
             color: colors.surfaceVariant,
             borderRadius: BorderRadius.circular(14),
           ),
-          child: Center(
-            child: CircularProgressIndicator(color: colors.accent),
-          ),
+          child: Center(child: CircularProgressIndicator(color: colors.accent)),
         ),
       );
     }
