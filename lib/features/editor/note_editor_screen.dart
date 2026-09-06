@@ -17,6 +17,8 @@ import '../../widgets/note_options_sheet.dart';
 import 'package:drift/drift.dart' show Value;
 import '../../core/database/app_database.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'blocks/voice_block_widget.dart';
+import 'blocks/image_block_widget.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final int noteId;
@@ -445,6 +447,24 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                         _showTableSizePicker();
                       },
                     ),
+                    _BlockPickerItem(
+                      icon: Icons.mic_rounded,
+                      label: 'Voice',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _controller.addBlock(BlockType.voice);
+                      },
+                    ),
+                    _BlockPickerItem(
+                      icon: Icons.image_outlined,
+                      label: 'Image',
+                      colors: colors,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _controller.addBlock(BlockType.image);
+                      },
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -849,11 +869,19 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           onSave: (data) => _controller.updateTableData(index, data),
         );
       case BlockType.voice:
-        return const SizedBox.shrink(); // placeholder until widget exists
-
+        return VoiceBlockWidget(
+          block: block,
+          colors: colors,
+          onDelete: () => _controller.deleteBlock(index),
+          onSave: (data) => _controller.updateVoiceData(index, data),
+        );
       case BlockType.image:
-        return const SizedBox.shrink(); // placeholder until widget exists
-
+        return ImageBlockWidget(
+          block: block,
+          colors: colors,
+          onDelete: () => _controller.deleteBlock(index),
+          onSave: (data) => _controller.updateImageData(index, data),
+        );
       case BlockType.divider:
         return const SizedBox.shrink();
     }
