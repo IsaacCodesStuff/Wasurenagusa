@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v0.4.0-rel)'
+        description: "Release tag (e.g. v0.8.0-rel)"
         required: true
         type: string
 
@@ -25,7 +25,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -46,14 +46,42 @@ jobs:
       - name: Run build_runner (Drift codegen)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build release APK
-        run: flutter build apk --release --target-platform android-arm64
+      # Build per-architecture split APKs (armeabi-v7a, arm64-v8a, x86_64)
+      - name: Build split APKs
+        run: flutter build apk --release --split-per-abi
+
+      # Build universal fat APK as a separate invocation
+      # Temporarily disable splits so AGP emits a single APK
+      - name: Build universal APK
+        run: flutter build apk --release
+
+      # Rename split APKs to human-readable names
+      - name: Rename APKs
+        run: |
+          TAG=${{ inputs.tag }}
+          APK_DIR=build/app/outputs/flutter-apk
+
+          mv "${APK_DIR}/app-armeabi-v7a-release.apk" \
+             "${APK_DIR}/wasurenagusa-${TAG}-armeabi-v7a.apk"
+
+          mv "${APK_DIR}/app-arm64-v8a-release.apk" \
+             "${APK_DIR}/wasurenagusa-${TAG}-arm64-v8a.apk"
+
+          mv "${APK_DIR}/app-x86_64-release.apk" \
+             "${APK_DIR}/wasurenagusa-${TAG}-x86_64.apk"
+
+          mv "${APK_DIR}/app-release.apk" \
+             "${APK_DIR}/wasurenagusa-${TAG}-universal.apk"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag }}
-          files: build/app/outputs/flutter-apk/app-release.apk
+          files: |
+            build/app/outputs/flutter-apk/wasurenagusa-${{ inputs.tag }}-armeabi-v7a.apk
+            build/app/outputs/flutter-apk/wasurenagusa-${{ inputs.tag }}-arm64-v8a.apk
+            build/app/outputs/flutter-apk/wasurenagusa-${{ inputs.tag }}-x86_64.apk
+            build/app/outputs/flutter-apk/wasurenagusa-${{ inputs.tag }}-universal.apk
           prerelease: true
           generate_release_notes: true
         env:

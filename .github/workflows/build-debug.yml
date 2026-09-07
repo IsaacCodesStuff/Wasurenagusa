@@ -15,7 +15,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -36,12 +36,21 @@ jobs:
       - name: Run build_runner (Drift codegen)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build debug APK
-        run: flutter build apk --debug --target-platform android-arm64
+      # Build per-architecture split APKs
+      - name: Build split debug APKs
+        run: flutter build apk --debug --split-per-abi
 
-      - name: Upload debug APK
+      # Build universal fat debug APK
+      - name: Build universal debug APK
+        run: flutter build apk --debug
+
+      - name: Upload debug APKs
         uses: actions/upload-artifact@v4
         with:
           name: wasurenagusa-debug
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: |
+            build/app/outputs/flutter-apk/app-armeabi-v7a-debug.apk
+            build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
+            build/app/outputs/flutter-apk/app-x86_64-debug.apk
+            build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
